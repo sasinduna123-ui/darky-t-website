@@ -179,15 +179,11 @@ export default function DirectOrderPage() {
     const cleanedNumber =
       cleanPhoneNumber(value);
 
-    if (
-      cleanedNumber.startsWith("94")
-    ) {
+    if (cleanedNumber.startsWith("94")) {
       return cleanedNumber.length === 11;
     }
 
-    if (
-      cleanedNumber.startsWith("0")
-    ) {
+    if (cleanedNumber.startsWith("0")) {
       return cleanedNumber.length === 10;
     }
 
@@ -311,6 +307,12 @@ ${deliveryMessage}
 📝 Note: ${note.trim() || "No special note"}
 
 ━━━━━━━━━━━━━━━━━━
+💳 *PAYMENT RECEIPT*
+━━━━━━━━━━━━━━━━━━
+
+📎 Payment එක කරලා receipt එකේ photo එකක් හෝ PDF එකක් මේ WhatsApp chat එකට එවන්න.
+
+━━━━━━━━━━━━━━━━━━
 
 ✅ Please confirm my order.
 Thank you! 🖤`;
@@ -341,7 +343,6 @@ Thank you! 🖤`;
 
   return (
     <main className="min-h-screen bg-gray-100 text-black">
-      {/* Navbar */}
       <nav className="flex items-center justify-between bg-black px-5 py-5 text-white md:px-12">
         <a
           href="/"
@@ -368,7 +369,6 @@ Thank you! 🖤`;
         </h1>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-2">
-          {/* Order Summary */}
           <div className="bg-white p-6 shadow-sm md:p-8">
             <h2 className="text-2xl font-black">
               ORDER SUMMARY
@@ -377,21 +377,15 @@ Thank you! 🖤`;
             <div className="mt-7 flex flex-col gap-6 sm:flex-row">
               <div className="w-full overflow-hidden bg-gray-100 sm:w-44">
                 <img
-                  src={
-                    currentOrderItem.image
-                  }
-                  alt={
-                    currentOrderItem.name
-                  }
+                  src={currentOrderItem.image}
+                  alt={currentOrderItem.name}
                   className="aspect-square h-full w-full object-cover"
                 />
               </div>
 
               <div className="flex-1">
                 <h3 className="text-2xl font-black">
-                  {
-                    currentOrderItem.name
-                  }
+                  {currentOrderItem.name}
                 </h3>
 
                 <div className="mt-5 space-y-3 text-sm">
@@ -411,9 +405,7 @@ Thank you! 🖤`;
                     </span>
 
                     <span className="font-bold">
-                      {
-                        currentOrderItem.size
-                      }
+                      {currentOrderItem.size}
                     </span>
                   </div>
 
@@ -423,9 +415,7 @@ Thank you! 🖤`;
                     </span>
 
                     <span className="font-bold">
-                      {
-                        currentOrderItem.quantity
-                      }
+                      {currentOrderItem.quantity}
                     </span>
                   </div>
 
@@ -504,7 +494,6 @@ Thank you! 🖤`;
             </button>
           </div>
 
-          {/* Customer Form */}
           <form
             onSubmit={sendWhatsAppOrder}
             className="bg-white p-6 shadow-sm md:p-8"
@@ -566,9 +555,7 @@ Thank you! 🖤`;
                 <input
                   type="tel"
                   required
-                  value={
-                    alternativePhone
-                  }
+                  value={alternativePhone}
                   onChange={(event) =>
                     setAlternativePhone(
                       event.target.value
