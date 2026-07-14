@@ -2,6 +2,15 @@
 
 import { useState } from "react";
 
+type CartItem = {
+  id: string;
+  name: string;
+  image: string;
+  size: string;
+  price: number;
+  quantity: number;
+};
+
 export default function GreyProductPage() {
   const [selectedSize, setSelectedSize] = useState("M");
   const [quantity, setQuantity] = useState(1);
@@ -15,7 +24,7 @@ export default function GreyProductPage() {
     M: 6,
     L: 5,
     XL: 2,
-    XXL: 1,
+    XXL: 0,
   };
 
   const selectedStock = stockBySize[selectedSize];
@@ -33,6 +42,42 @@ Quantity: ${quantity}
 Total: Rs. ${total.toLocaleString()}`
   );
 
+  function addToCart() {
+    if (isOutOfStock) return;
+
+    const newItem: CartItem = {
+      id: "grey-tee",
+      name: "Dark Grey Oversized Tee",
+      image: "/images/TSHIRT3.jpg",
+      size: selectedSize,
+      price,
+      quantity,
+    };
+
+    try {
+      const savedCart = localStorage.getItem("darky-cart");
+      const cart: CartItem[] = savedCart ? JSON.parse(savedCart) : [];
+
+      const existingIndex = cart.findIndex(
+        (item) => item.id === newItem.id && item.size === newItem.size
+      );
+
+      if (existingIndex >= 0) {
+        cart[existingIndex].quantity = Math.min(
+          selectedStock,
+          cart[existingIndex].quantity + quantity
+        );
+      } else {
+        cart.push(newItem);
+      }
+
+      localStorage.setItem("darky-cart", JSON.stringify(cart));
+      alert("Product added to cart!");
+    } catch {
+      alert("Could not add product to cart.");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-white text-black">
       <nav className="flex items-center justify-between border-b px-6 py-5 md:px-12">
@@ -40,9 +85,15 @@ Total: Rs. ${total.toLocaleString()}`
           DARKY T
         </a>
 
-        <a href="/" className="text-sm font-semibold hover:text-gray-500">
-          BACK TO HOME
-        </a>
+        <div className="flex items-center gap-5">
+          <a href="/cart" className="text-sm font-semibold hover:text-gray-500">
+            CART
+          </a>
+
+          <a href="/" className="text-sm font-semibold hover:text-gray-500">
+            BACK TO HOME
+          </a>
+        </div>
       </nav>
 
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-12 md:grid-cols-2 md:px-12">
@@ -154,14 +205,26 @@ Total: Rs. ${total.toLocaleString()}`
             </span>
           </div>
 
+          <button
+            onClick={addToCart}
+            disabled={isOutOfStock}
+            className={`mt-8 w-full px-8 py-4 text-center font-bold transition ${
+              isOutOfStock
+                ? "cursor-not-allowed bg-gray-300 text-gray-500"
+                : "bg-black text-white hover:bg-gray-800"
+            }`}
+          >
+            {isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}
+          </button>
+
           <a
             href={`https://wa.me/${whatsappNumber}?text=${orderMessage}`}
             target="_blank"
             rel="noopener noreferrer"
-            className={`mt-8 px-8 py-4 text-center font-bold text-white transition ${
+            className={`mt-4 px-8 py-4 text-center font-bold text-white transition ${
               isOutOfStock
                 ? "pointer-events-none bg-gray-400"
-                : "bg-black hover:bg-gray-800"
+                : "bg-green-600 hover:bg-green-700"
             }`}
           >
             {isOutOfStock ? "OUT OF STOCK" : "ORDER ON WHATSAPP"}
