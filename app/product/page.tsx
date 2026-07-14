@@ -59,7 +59,8 @@ Total: Rs. ${total.toLocaleString()}`
       const cart: CartItem[] = savedCart ? JSON.parse(savedCart) : [];
 
       const existingIndex = cart.findIndex(
-        (item) => item.id === newItem.id && item.size === newItem.size
+        (item) =>
+          item.id === newItem.id && item.size === newItem.size
       );
 
       if (existingIndex >= 0) {
@@ -80,8 +81,12 @@ Total: Rs. ${total.toLocaleString()}`
 
   return (
     <main className="min-h-screen bg-white text-black">
+      {/* Navbar */}
       <nav className="flex items-center justify-between border-b px-6 py-5 md:px-12">
-        <a href="/" className="text-2xl font-black tracking-[0.3em]">
+        <a
+          href="/"
+          className="text-2xl font-black tracking-[0.3em]"
+        >
           DARKY T
         </a>
 
@@ -102,7 +107,9 @@ Total: Rs. ${total.toLocaleString()}`
         </div>
       </nav>
 
+      {/* Product Section */}
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-12 md:grid-cols-2 md:px-12">
+        {/* Product Image */}
         <div className="overflow-hidden bg-gray-100">
           <img
             src="/images/TSHIRT1.jpg"
@@ -111,6 +118,7 @@ Total: Rs. ${total.toLocaleString()}`
           />
         </div>
 
+        {/* Product Information */}
         <div className="flex flex-col justify-center">
           <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
             DARKY T COLLECTION
@@ -120,15 +128,20 @@ Total: Rs. ${total.toLocaleString()}`
             ESSENTIAL BLACK TEE
           </h1>
 
-          <p className="mt-4 text-2xl font-bold">Rs. 3,650</p>
+          <p className="mt-4 text-2xl font-bold">
+            Rs. 3,650
+          </p>
 
           <p className="mt-6 leading-7 text-gray-600">
-            Premium oversized T-shirt made with 240 GSM heavy cotton.
+            Premium oversized black T-shirt made with 240 GSM heavy cotton.
             Designed for comfort, durability and a bold streetwear look.
           </p>
 
+          {/* Size Selection */}
           <div className="mt-8">
-            <p className="mb-3 font-bold">SELECT SIZE</p>
+            <p className="mb-3 font-bold">
+              SELECT SIZE
+            </p>
 
             <div className="flex flex-wrap gap-3">
               {["XS", "S", "M", "L", "XL", "XXL"].map((size) => {
@@ -168,8 +181,11 @@ Total: Rs. ${total.toLocaleString()}`
             </p>
           </div>
 
+          {/* Quantity */}
           <div className="mt-8">
-            <p className="mb-3 font-bold">QUANTITY</p>
+            <p className="mb-3 font-bold">
+              QUANTITY
+            </p>
 
             <div className="flex w-fit items-center border border-gray-300">
               <button
@@ -203,14 +219,18 @@ Total: Rs. ${total.toLocaleString()}`
             </div>
           </div>
 
+          {/* Total */}
           <div className="mt-8 flex justify-between border-y py-5">
-            <span className="font-bold">TOTAL</span>
+            <span className="font-bold">
+              TOTAL
+            </span>
 
             <span className="text-xl font-black">
               Rs. {total.toLocaleString()}
             </span>
           </div>
 
+          {/* Add to Cart */}
           <button
             onClick={addToCart}
             disabled={isOutOfStock}
@@ -223,6 +243,7 @@ Total: Rs. ${total.toLocaleString()}`
             {isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}
           </button>
 
+          {/* WhatsApp Order */}
           <a
             href={`https://wa.me/${whatsappNumber}?text=${orderMessage}`}
             target="_blank"
@@ -236,6 +257,7 @@ Total: Rs. ${total.toLocaleString()}`
             {isOutOfStock ? "OUT OF STOCK" : "ORDER ON WHATSAPP"}
           </a>
 
+          {/* Product Features */}
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
             <p>✓ 240 GSM heavy cotton</p>
             <p>✓ Premium oversized fit</p>
