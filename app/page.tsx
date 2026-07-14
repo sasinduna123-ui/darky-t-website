@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { products } from "@/app/data/products";
 
 type CartItem = {
   id: string;
@@ -248,99 +249,38 @@ export default function Home() {
             BEST SELLERS
           </h2>
 
-          <div className="mt-10 grid gap-8 md:grid-cols-3">
-            {/* Black Product */}
-            <div>
-              <a
-                href="/product"
-                className="block overflow-hidden"
-              >
-                <img
-                  src="/images/TSHIRT1.jpg"
-                  alt="Essential Black Tee"
-                  className="aspect-square w-full object-cover transition duration-300 hover:scale-105"
-                />
-              </a>
+          <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {products.map((product) => (
+              <div key={product.id}>
+                <a
+                  href={`/product/${product.slug}`}
+                  className="block overflow-hidden bg-gray-100"
+                >
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="aspect-square w-full object-cover transition duration-300 hover:scale-105"
+                  />
+                </a>
 
-              <a href="/product">
-                <h3 className="mt-5 text-xl font-black hover:underline">
-                  Essential Black Tee
-                </h3>
-              </a>
+                <a href={`/product/${product.slug}`}>
+                  <h3 className="mt-5 text-xl font-black hover:underline">
+                    {product.name}
+                  </h3>
+                </a>
 
-              <p className="mt-2 text-lg font-semibold text-gray-700">
-                Rs. 3,650
-              </p>
+                <p className="mt-2 text-lg font-semibold text-gray-700">
+                  Rs. {product.price.toLocaleString()}
+                </p>
 
-              <a
-                href="/product"
-                className="mt-4 block w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
-              >
-                VIEW PRODUCT
-              </a>
-            </div>
-
-            {/* White Product */}
-            <div>
-              <a
-                href="/product/white"
-                className="block overflow-hidden"
-              >
-                <img
-                  src="/images/TSHIRT2.jpg"
-                  alt="Heavy Cotton White Tee"
-                  className="aspect-square w-full object-cover transition duration-300 hover:scale-105"
-                />
-              </a>
-
-              <a href="/product/white">
-                <h3 className="mt-5 text-xl font-black hover:underline">
-                  Heavy Cotton White Tee
-                </h3>
-              </a>
-
-              <p className="mt-2 text-lg font-semibold text-gray-700">
-                Rs. 3,650
-              </p>
-
-              <a
-                href="/product/white"
-                className="mt-4 block w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
-              >
-                VIEW PRODUCT
-              </a>
-            </div>
-
-            {/* Grey Product */}
-            <div>
-              <a
-                href="/product/grey"
-                className="block overflow-hidden"
-              >
-                <img
-                  src="/images/TSHIRT3.jpg"
-                  alt="Dark Grey Oversized Tee"
-                  className="aspect-square w-full object-cover transition duration-300 hover:scale-105"
-                />
-              </a>
-
-              <a href="/product/grey">
-                <h3 className="mt-5 text-xl font-black hover:underline">
-                  Dark Grey Oversized Tee
-                </h3>
-              </a>
-
-              <p className="mt-2 text-lg font-semibold text-gray-700">
-                Rs. 3,650
-              </p>
-
-              <a
-                href="/product/grey"
-                className="mt-4 block w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
-              >
-                VIEW PRODUCT
-              </a>
-            </div>
+                <a
+                  href={`/product/${product.slug}`}
+                  className="mt-4 block w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
+                >
+                  VIEW PRODUCT
+                </a>
+              </div>
+            ))}
           </div>
         </div>
       </section>
