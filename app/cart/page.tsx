@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CartCount from "@/app/components/CartCount";
 
 type CartItem = {
   id: string;
@@ -35,7 +36,15 @@ export default function CartPage() {
 
   function saveCart(updatedCart: CartItem[]) {
     setCartItems(updatedCart);
-    localStorage.setItem("darky-cart", JSON.stringify(updatedCart));
+
+    localStorage.setItem(
+      "darky-cart",
+      JSON.stringify(updatedCart)
+    );
+
+    window.dispatchEvent(
+      new Event("darky-cart-updated")
+    );
   }
 
   function increaseQuantity(index: number) {
@@ -75,7 +84,9 @@ export default function CartPage() {
     0
   );
 
-  const hasFixedDeliveryFee = totalItems > 0 && totalItems <= 5;
+  const hasFixedDeliveryFee =
+    totalItems > 0 && totalItems <= 5;
+
   const deliveryFee = hasFixedDeliveryFee ? 350 : 0;
   const finalTotal = subtotal + deliveryFee;
 
@@ -144,12 +155,16 @@ ${totalMessage}`
           DARKY T
         </a>
 
-        <a
-          href="/"
-          className="whitespace-nowrap text-xs font-semibold hover:text-gray-300 sm:text-sm"
-        >
-          CONTINUE SHOPPING
-        </a>
+        <div className="flex items-center gap-4 sm:gap-6">
+          <CartCount />
+
+          <a
+            href="/"
+            className="whitespace-nowrap text-xs font-semibold hover:text-gray-300 sm:text-sm"
+          >
+            CONTINUE SHOPPING
+          </a>
+        </div>
       </nav>
 
       <section className="mx-auto max-w-7xl px-5 py-12 md:px-12">
@@ -225,7 +240,9 @@ ${totalMessage}`
                       <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center border border-gray-300">
                           <button
-                            onClick={() => decreaseQuantity(index)}
+                            onClick={() =>
+                              decreaseQuantity(index)
+                            }
                             className="h-11 w-11 text-xl hover:bg-gray-100"
                           >
                             −
@@ -236,7 +253,9 @@ ${totalMessage}`
                           </span>
 
                           <button
-                            onClick={() => increaseQuantity(index)}
+                            onClick={() =>
+                              increaseQuantity(index)
+                            }
                             className="h-11 w-11 text-xl hover:bg-gray-100"
                           >
                             +
@@ -362,7 +381,9 @@ ${totalMessage}`
 
               <div className="flex justify-between border-b border-white/20 py-5">
                 <span>Subtotal</span>
-                <span>Rs. {subtotal.toLocaleString()}</span>
+                <span>
+                  Rs. {subtotal.toLocaleString()}
+                </span>
               </div>
 
               <div className="border-b border-white/20 py-5">
@@ -378,15 +399,18 @@ ${totalMessage}`
 
                 {totalItems > 5 && (
                   <p className="mt-3 text-sm leading-6 text-gray-300">
-                    Orders above 5 T-shirts have a custom delivery fee.
-                    Please confirm it through WhatsApp chat.
+                    Orders above 5 T-shirts have a custom
+                    delivery fee. Please confirm it through
+                    WhatsApp chat.
                   </p>
                 )}
               </div>
 
               <div className="flex justify-between py-6 text-xl font-black">
                 <span>
-                  {hasFixedDeliveryFee ? "FINAL TOTAL" : "SUBTOTAL"}
+                  {hasFixedDeliveryFee
+                    ? "FINAL TOTAL"
+                    : "SUBTOTAL"}
                 </span>
 
                 <span>
@@ -400,8 +424,8 @@ ${totalMessage}`
 
               {!formComplete && (
                 <p className="mb-4 text-sm leading-6 text-yellow-300">
-                  Fill in your name, primary phone number, district and
-                  address before checkout.
+                  Fill in your name, primary phone number,
+                  district and address before checkout.
                 </p>
               )}
 
@@ -412,10 +436,15 @@ ${totalMessage}`
                     : "#"
                 }
                 target={formComplete ? "_blank" : undefined}
-                rel={formComplete ? "noopener noreferrer" : undefined}
+                rel={
+                  formComplete
+                    ? "noopener noreferrer"
+                    : undefined
+                }
                 onClick={(event) => {
                   if (!formComplete) {
                     event.preventDefault();
+
                     alert(
                       "Please fill in your name, primary phone number, district and address."
                     );
