@@ -1,25 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import type { ProductSizeGuide } from "@/app/data/products";
+import type {
+  ProductType,
+  TshirtSizeGuide,
+  PantsSizeGuide,
+} from "@/app/data/products";
 
-type SizeGuideProps = {
-  sizeGuide: ProductSizeGuide;
-};
+type SizeGuideProps =
+  | {
+      productType: "tshirt";
+      sizeGuide: TshirtSizeGuide;
+    }
+  | {
+      productType: "pants";
+      sizeGuide: PantsSizeGuide;
+    };
 
-const sizes = [
-  "XS",
-  "S",
-  "M",
-  "L",
-  "XL",
-  "XXL",
-] as const;
+const sizes = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 
-export default function SizeGuide({
-  sizeGuide,
-}: SizeGuideProps) {
+export default function SizeGuide(props: SizeGuideProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const isTshirt = props.productType === "tshirt";
 
   return (
     <>
@@ -33,7 +36,7 @@ export default function SizeGuide({
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white p-6 text-black shadow-2xl sm:p-8">
+          <div className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto bg-white p-6 text-black shadow-2xl sm:p-8">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
@@ -48,7 +51,7 @@ export default function SizeGuide({
             </p>
 
             <h2 className="mt-2 text-3xl font-black">
-              SIZE GUIDE
+              {isTshirt ? "T-SHIRT SIZE GUIDE" : "PANTS SIZE GUIDE"}
             </h2>
 
             <p className="mt-4 leading-7 text-gray-600">
@@ -57,56 +60,117 @@ export default function SizeGuide({
             </p>
 
             <div className="mt-7 overflow-x-auto">
-              <table className="w-full min-w-[520px] border-collapse text-left">
-                <thead>
-                  <tr className="bg-black text-white">
-                    <th className="border border-black px-4 py-3">
-                      SIZE
-                    </th>
+              {isTshirt ? (
+                <table className="w-full min-w-[520px] border-collapse text-left">
+                  <thead>
+                    <tr className="bg-black text-white">
+                      <th className="border border-black px-4 py-3">
+                        SIZE
+                      </th>
 
-                    <th className="border border-black px-4 py-3">
-                      CHEST
-                    </th>
+                      <th className="border border-black px-4 py-3">
+                        CHEST
+                      </th>
 
-                    <th className="border border-black px-4 py-3">
-                      LENGTH
-                    </th>
+                      <th className="border border-black px-4 py-3">
+                        LENGTH
+                      </th>
 
-                    <th className="border border-black px-4 py-3">
-                      SLEEVE
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {sizes.map((size, index) => (
-                    <tr
-                      key={size}
-                      className={
-                        index % 2 === 1
-                          ? "bg-gray-50"
-                          : "bg-white"
-                      }
-                    >
-                      <td className="border px-4 py-3 font-bold">
-                        {size}
-                      </td>
-
-                      <td className="border px-4 py-3">
-                        {sizeGuide[size].chest}
-                      </td>
-
-                      <td className="border px-4 py-3">
-                        {sizeGuide[size].length}
-                      </td>
-
-                      <td className="border px-4 py-3">
-                        {sizeGuide[size].sleeve}
-                      </td>
+                      <th className="border border-black px-4 py-3">
+                        SLEEVE
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+
+                  <tbody>
+                    {sizes.map((size, index) => (
+                      <tr
+                        key={size}
+                        className={
+                          index % 2 === 1
+                            ? "bg-gray-50"
+                            : "bg-white"
+                        }
+                      >
+                        <td className="border px-4 py-3 font-bold">
+                          {size}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          {props.sizeGuide[size].chest}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          {props.sizeGuide[size].length}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          {props.sizeGuide[size].sleeve}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="w-full min-w-[620px] border-collapse text-left">
+                  <thead>
+                    <tr className="bg-black text-white">
+                      <th className="border border-black px-4 py-3">
+                        SIZE
+                      </th>
+
+                      <th className="border border-black px-4 py-3">
+                        WAIST
+                      </th>
+
+                      <th className="border border-black px-4 py-3">
+                        HIP
+                      </th>
+
+                      <th className="border border-black px-4 py-3">
+                        LENGTH
+                      </th>
+
+                      <th className="border border-black px-4 py-3">
+                        THIGH
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {sizes.map((size, index) => (
+                      <tr
+                        key={size}
+                        className={
+                          index % 2 === 1
+                            ? "bg-gray-50"
+                            : "bg-white"
+                        }
+                      >
+                        <td className="border px-4 py-3 font-bold">
+                          {size}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          {props.sizeGuide[size].waist}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          {props.sizeGuide[size].hip}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          {props.sizeGuide[size].length}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          {props.sizeGuide[size].thigh}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
 
             <div className="mt-7 bg-gray-100 p-5">
@@ -115,9 +179,9 @@ export default function SizeGuide({
               </h3>
 
               <p className="mt-2 leading-7 text-gray-600">
-                ඔබට හොඳින් ගැළපෙන T-shirt එකක් පැතලි මතුපිටක
-                තබා chest, length සහ sleeve measurements මැනලා
-                මේ table එක සමඟ සසඳන්න.
+                {isTshirt
+                  ? "ඔබට හොඳින් ගැළපෙන T-shirt එකක් පැතලි මතුපිටක තබා chest, length සහ sleeve measurements මැනලා මේ table එක සමඟ සසඳන්න."
+                  : "ඔබට හොඳින් ගැළපෙන කලිසමක් පැතලි මතුපිටක තබා waist, hip, length සහ thigh measurements මැනලා මේ table එක සමඟ සසඳන්න."}
               </p>
             </div>
 
