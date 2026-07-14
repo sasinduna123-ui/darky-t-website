@@ -112,12 +112,12 @@ export default function Home() {
       <div>
         <img
 src="/images/TSHIRT3.jpg"
-  alt="Dark Grey Oversized Tee"
+  alt="Lara Coft-Tomb Raider"
   className="aspect-square w-full object-cover"
 />
 
         <h4 className="mt-5 text-lg font-bold">
-          Dark Grey Oversized Te
+          Dark Grey Oversized Tee
         </h4>
 
         <p className="mt-1 text-gray-600">
