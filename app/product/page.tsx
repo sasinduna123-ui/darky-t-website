@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FaWhatsapp } from "react-icons/fa";
 
 type CartItem = {
   id: string;
@@ -44,7 +45,9 @@ export default function ProductPage() {
 
     try {
       const savedCart = localStorage.getItem("darky-cart");
-      const cart: CartItem[] = savedCart ? JSON.parse(savedCart) : [];
+      const cart: CartItem[] = savedCart
+        ? JSON.parse(savedCart)
+        : [];
 
       const existingIndex = cart.findIndex(
         (item) =>
@@ -61,7 +64,11 @@ export default function ProductPage() {
         cart.push(newItem);
       }
 
-      localStorage.setItem("darky-cart", JSON.stringify(cart));
+      localStorage.setItem(
+        "darky-cart",
+        JSON.stringify(cart)
+      );
+
       alert("Product added to cart!");
     } catch {
       alert("Could not add product to cart.");
@@ -146,8 +153,9 @@ export default function ProductPage() {
           </p>
 
           <p className="mt-6 leading-7 text-gray-600">
-            Premium oversized black T-shirt made with 240 GSM heavy cotton.
-            Designed for comfort, durability and a bold streetwear look.
+            Premium oversized black T-shirt made with
+            240 GSM heavy cotton. Designed for comfort,
+            durability and a bold streetwear look.
           </p>
 
           {/* Size Selection */}
@@ -157,35 +165,39 @@ export default function ProductPage() {
             </p>
 
             <div className="flex flex-wrap gap-3">
-              {["XS", "S", "M", "L", "XL", "XXL"].map((size) => {
-                const stock = stockBySize[size];
-                const soldOut = stock === 0;
+              {["XS", "S", "M", "L", "XL", "XXL"].map(
+                (size) => {
+                  const stock = stockBySize[size];
+                  const soldOut = stock === 0;
 
-                return (
-                  <button
-                    key={size}
-                    disabled={soldOut}
-                    onClick={() => {
-                      setSelectedSize(size);
-                      setQuantity(1);
-                    }}
-                    className={`min-w-14 border px-3 py-3 font-bold transition ${
-                      soldOut
-                        ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through"
-                        : selectedSize === size
-                          ? "border-black bg-black text-white"
-                          : "border-gray-300 hover:border-black"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={size}
+                      disabled={soldOut}
+                      onClick={() => {
+                        setSelectedSize(size);
+                        setQuantity(1);
+                      }}
+                      className={`min-w-14 border px-3 py-3 font-bold transition ${
+                        soldOut
+                          ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through"
+                          : selectedSize === size
+                            ? "border-black bg-black text-white"
+                            : "border-gray-300 hover:border-black"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  );
+                }
+              )}
             </div>
 
             <p
               className={`mt-3 text-sm font-semibold ${
-                isOutOfStock ? "text-red-600" : "text-green-600"
+                isOutOfStock
+                  ? "text-red-600"
+                  : "text-green-600"
               }`}
             >
               {isOutOfStock
@@ -219,7 +231,10 @@ export default function ProductPage() {
               <button
                 onClick={() =>
                   setQuantity((current) =>
-                    Math.min(selectedStock, current + 1)
+                    Math.min(
+                      selectedStock,
+                      current + 1
+                    )
                   )
                 }
                 disabled={quantity >= selectedStock}
@@ -255,25 +270,31 @@ export default function ProductPage() {
                 : "bg-black text-white hover:bg-gray-800"
             }`}
           >
-            {isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}
+            {isOutOfStock
+              ? "OUT OF STOCK"
+              : "ADD TO CART"}
           </button>
 
-          {/* Direct Order */}
+          {/* Direct Order Button */}
           <button
             onClick={directOrder}
             disabled={isOutOfStock}
-            className={`mt-4 w-full px-8 py-4 text-center font-bold text-white transition ${
+            className={`mt-4 flex w-full items-center justify-center gap-3 px-8 py-4 text-center font-bold text-white transition ${
               isOutOfStock
                 ? "cursor-not-allowed bg-gray-400"
                 : "bg-green-600 hover:bg-green-700"
             }`}
           >
-            {isOutOfStock
-              ? "OUT OF STOCK"
-              : "ORDER WITH DELIVERY DETAILS"}
-          </button>
+            {!isOutOfStock && (
+              <FaWhatsapp className="text-2xl" />
+            )}
 
-          
+            <span>
+              {isOutOfStock
+                ? "OUT OF STOCK"
+                : "ORDER WITH DELIVERY DETAILS"}
+            </span>
+          </button>
 
           {/* Product Features */}
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
