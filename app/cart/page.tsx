@@ -1,36 +1,104 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import CartCount from "@/app/components/CartCount";
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
+import { FaWhatsapp } from "react-icons/fa";
 
 type CartItem = {
   id: string;
   name: string;
   image: string;
+
+  color?: string;
+  colorSlug?: string;
+
   size: string;
   price: number;
   quantity: number;
 };
 
-export default function CartPage() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [customerName, setCustomerName] = useState("");
-  const [primaryPhone, setPrimaryPhone] = useState("");
-  const [alternativePhone, setAlternativePhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [district, setDistrict] = useState("");
+const districts = [
+  "Ampara",
+  "Anuradhapura",
+  "Badulla",
+  "Batticaloa",
+  "Colombo",
+  "Galle",
+  "Gampaha",
+  "Hambantota",
+  "Jaffna",
+  "Kalutara",
+  "Kandy",
+  "Kegalle",
+  "Kilinochchi",
+  "Kurunegala",
+  "Mannar",
+  "Matale",
+  "Matara",
+  "Monaragala",
+  "Mullaitivu",
+  "Nuwara Eliya",
+  "Polonnaruwa",
+  "Puttalam",
+  "Ratnapura",
+  "Trincomalee",
+  "Vavuniya",
+];
 
-  const whatsappNumber = "94788809678";
+export default function CartPage() {
+  const [cartItems, setCartItems] = useState<
+    CartItem[]
+  >([]);
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [customerName, setCustomerName] =
+    useState("");
+
+  const [primaryPhone, setPrimaryPhone] =
+    useState("");
+
+  const [alternativePhone, setAlternativePhone] =
+    useState("");
+
+  const [district, setDistrict] =
+    useState("");
+
+  const [address, setAddress] =
+    useState("");
+
+  const [note, setNote] =
+    useState("");
+
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
   useEffect(() => {
-    const savedCart = localStorage.getItem("darky-cart");
+    try {
+      const savedCart =
+        localStorage.getItem("darky-cart");
 
-    if (savedCart) {
-      try {
-        setCartItems(JSON.parse(savedCart));
-      } catch {
+      if (!savedCart) {
         setCartItems([]);
+        return;
       }
+
+      const parsedCart: CartItem[] =
+        JSON.parse(savedCart);
+
+      setCartItems(
+        Array.isArray(parsedCart)
+          ? parsedCart
+          : []
+      );
+    } catch {
+      setCartItems([]);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -48,18 +116,34 @@ export default function CartPage() {
   }
 
   function increaseQuantity(index: number) {
-    const updatedCart = [...cartItems];
-    updatedCart[index].quantity += 1;
+    const updatedCart = cartItems.map(
+      (item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              quantity: item.quantity + 1,
+            }
+          : item
+    );
+
     saveCart(updatedCart);
   }
 
   function decreaseQuantity(index: number) {
-    const updatedCart = [...cartItems];
+    const updatedCart = cartItems
+      .map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              quantity: Math.max(
+                1,
+                item.quantity - 1
+              ),
+            }
+          : item
+      );
 
-    if (updatedCart[index].quantity > 1) {
-      updatedCart[index].quantity -= 1;
-      saveCart(updatedCart);
-    }
+    saveCart(updatedCart);
   }
 
   function removeItem(index: number) {
@@ -71,394 +155,673 @@ export default function CartPage() {
   }
 
   function clearCart() {
+    const confirmed = window.confirm(
+      "Cart එකේ products සියල්ල remove කරන්නද?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     saveCart([]);
   }
 
-  const totalItems = cartItems.reduce(
-    (sum, item) => sum + item.quantity,
+  const subtotal = cartItems.reduce(
+    (total, item) =>
+      total + item.price * item.quantity,
     0
   );
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+  const totalQuantity = cartItems.reduce(
+    (total, item) =>
+      total + item.quantity,
     0
   );
 
   const hasFixedDeliveryFee =
-    totalItems > 0 && totalItems <= 5;
+    totalQuantity > 0 &&
+    totalQuantity <= 5;
 
-  const deliveryFee = hasFixedDeliveryFee ? 350 : 0;
-  const finalTotal = subtotal + deliveryFee;
+  const deliveryFee =
+    hasFixedDeliveryFee ? 350 : 0;
 
-  const orderDetails = cartItems
-    .map(
-      (item, index) =>
-        `${index + 1}. ${item.name}
-Size: ${item.size}
-Quantity: ${item.quantity}
-Price: Rs. ${(item.price * item.quantity).toLocaleString()}`
-    )
-    .join("\n\n");
+  const finalTotal =
+    subtotal + deliveryFee;
 
-  const deliveryMessage =
-    totalItems <= 5
-      ? `Delivery Fee: Rs. ${deliveryFee.toLocaleString()}`
-      : "Delivery Fee: Please confirm through WhatsApp chat";
+  function cleanPhoneNumber(
+    value: string
+  ): string {
+    return value.replace(/\D/g, "");
+  }
 
-  const totalMessage =
-    totalItems <= 5
-      ? `Final Total: Rs. ${finalTotal.toLocaleString()}`
-      : `Subtotal: Rs. ${subtotal.toLocaleString()}
-Final total will be confirmed after delivery fee is calculated.`;
+  function formatSriLankanPhone(
+    value: string
+  ): string {
+    const cleanedNumber =
+      cleanPhoneNumber(value);
 
-  const whatsappMessage = encodeURIComponent(
-    `Hello DARKY T,
-
-I want to place this order:
-
-CUSTOMER DETAILS
-
-Name: ${customerName}
-Primary Phone: ${primaryPhone}
-Alternative Phone: ${
-      alternativePhone.trim() !== ""
-        ? alternativePhone
-        : "Not provided"
+    if (cleanedNumber.startsWith("94")) {
+      return `+${cleanedNumber}`;
     }
-Address: ${address}
-District: ${district}
 
-ORDER DETAILS
+    if (cleanedNumber.startsWith("0")) {
+      return `+94${cleanedNumber.slice(1)}`;
+    }
 
-${orderDetails}
+    return `+94${cleanedNumber}`;
+  }
 
-Total Items: ${totalItems}
-Subtotal: Rs. ${subtotal.toLocaleString()}
+  function isValidPhone(
+    value: string
+  ): boolean {
+    const cleanedNumber =
+      cleanPhoneNumber(value);
+
+    if (cleanedNumber.startsWith("94")) {
+      return cleanedNumber.length === 11;
+    }
+
+    if (cleanedNumber.startsWith("0")) {
+      return cleanedNumber.length === 10;
+    }
+
+    return cleanedNumber.length === 9;
+  }
+
+  function validateForm(): boolean {
+    if (cartItems.length === 0) {
+      setErrorMessage(
+        "Cart එකේ products කිසිවක් නැහැ."
+      );
+      return false;
+    }
+
+    if (!customerName.trim()) {
+      setErrorMessage(
+        "Customer name එක ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!primaryPhone.trim()) {
+      setErrorMessage(
+        "Primary phone number එක ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!isValidPhone(primaryPhone)) {
+      setErrorMessage(
+        "හරි primary phone number එකක් ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!alternativePhone.trim()) {
+      setErrorMessage(
+        "Alternative phone number එකත් අනිවාර්යයෙන් ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!isValidPhone(alternativePhone)) {
+      setErrorMessage(
+        "හරි alternative phone number එකක් ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (
+      cleanPhoneNumber(primaryPhone) ===
+      cleanPhoneNumber(alternativePhone)
+    ) {
+      setErrorMessage(
+        "Phone numbers දෙකට වෙනස් numbers දෙකක් ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!district.trim()) {
+      setErrorMessage(
+        "District එක තෝරන්න."
+      );
+      return false;
+    }
+
+    if (!address.trim()) {
+      setErrorMessage(
+        "Delivery address එක ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    setErrorMessage("");
+    return true;
+  }
+
+  function sendWhatsAppOrder(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const formattedPrimaryPhone =
+      formatSriLankanPhone(primaryPhone);
+
+    const formattedAlternativePhone =
+      formatSriLankanPhone(
+        alternativePhone
+      );
+
+    const productDetails = cartItems
+      .map((item, index) => {
+        const itemTotal =
+          item.price * item.quantity;
+
+        const selectedColour =
+          item.color?.trim() ||
+          "Not selected";
+
+        return `🛍️ *ITEM ${index + 1}*
+
+👕 Product: ${item.name}
+🎨 Colour: ${selectedColour}
+📏 Size: ${item.size}
+🔢 Quantity: ${item.quantity}
+💵 Unit Price: Rs. ${item.price.toLocaleString()}
+💰 Item Total: Rs. ${itemTotal.toLocaleString()}`;
+      })
+      .join("\n\n━━━━━━━━━━━━━━━━━━\n\n");
+
+    const deliveryMessage =
+      hasFixedDeliveryFee
+        ? `🚚 Delivery Fee: Rs. ${deliveryFee.toLocaleString()}
+💳 Final Total: Rs. ${finalTotal.toLocaleString()}`
+        : `🚚 Delivery Fee: Please confirm through WhatsApp chat
+💳 Final Total: Will be confirmed after delivery fee is calculated`;
+
+    const whatsappMessage = `🖤 *DARKY T - NEW CART ORDER* 🖤
+
+Hello DARKY T 👋
+I would like to place an order.
+
+━━━━━━━━━━━━━━━━━━
+🛒 *ORDER ITEMS*
+━━━━━━━━━━━━━━━━━━
+
+${productDetails}
+
+━━━━━━━━━━━━━━━━━━
+🧾 *ORDER TOTAL*
+━━━━━━━━━━━━━━━━━━
+
+📦 Total Items: ${totalQuantity}
+💵 Subtotal: Rs. ${subtotal.toLocaleString()}
 ${deliveryMessage}
-${totalMessage}`
-  );
 
-  const formComplete =
-    customerName.trim() !== "" &&
-    primaryPhone.trim() !== "" &&
-    address.trim() !== "" &&
-    district.trim() !== "";
+━━━━━━━━━━━━━━━━━━
+👤 *CUSTOMER DETAILS*
+━━━━━━━━━━━━━━━━━━
+
+🙍 Name: ${customerName.trim()}
+📞 Primary Phone: ${formattedPrimaryPhone}
+☎️ Alternative Phone: ${formattedAlternativePhone}
+📍 District: ${district.trim()}
+🏠 Delivery Address: ${address.trim()}
+📝 Note: ${note.trim() || "No special note"}
+
+━━━━━━━━━━━━━━━━━━
+💳 *PAYMENT RECEIPT*
+━━━━━━━━━━━━━━━━━━
+
+📎 Payment එක කරලා receipt එකේ photo එකක් හෝ PDF එකක් මේ WhatsApp chat එකට එවන්න.
+
+━━━━━━━━━━━━━━━━━━
+
+✅ Please confirm my order.
+Thank you! 🖤`;
+
+    const whatsappNumber =
+      "94788809678";
+
+    const whatsappUrl =
+      `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+        whatsappMessage
+      )}`;
+
+    window.open(
+      whatsappUrl,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-white px-6 text-black">
+        <p className="font-bold">
+          Loading cart...
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-100 text-black">
       {/* Navbar */}
-      <nav className="flex items-center justify-between border-b bg-black px-4 py-5 text-white sm:px-6 md:px-12">
+      <nav className="flex items-center justify-between bg-black px-5 py-5 text-white md:px-12">
         <a
           href="/"
-          className="text-xl font-black tracking-[0.2em] sm:text-2xl sm:tracking-[0.3em]"
+          className="text-xl font-black tracking-[0.25em] sm:text-2xl"
         >
           DARKY T
         </a>
 
-        <div className="flex items-center gap-4 sm:gap-6">
-          <CartCount />
-
-          <a
-            href="/"
-            className="whitespace-nowrap text-xs font-semibold hover:text-gray-300 sm:text-sm"
-          >
-            CONTINUE SHOPPING
-          </a>
-        </div>
+        <a
+          href="/#shop"
+          className="text-sm font-bold transition hover:text-gray-300"
+        >
+          CONTINUE SHOPPING
+        </a>
       </nav>
 
-      <section className="mx-auto max-w-7xl px-5 py-12 md:px-12">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
-              YOUR ORDER
-            </p>
+      <section className="mx-auto max-w-7xl px-5 py-10 md:px-12 md:py-14">
+        <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
+          DARKY T CHECKOUT
+        </p>
 
-            <h1 className="mt-2 text-4xl font-black">
-              SHOPPING CART
-            </h1>
-          </div>
-
-          {cartItems.length > 0 && (
-            <button
-              onClick={clearCart}
-              className="border border-red-500 px-5 py-2 font-semibold text-red-600 transition hover:bg-red-600 hover:text-white"
-            >
-              CLEAR CART
-            </button>
-          )}
-        </div>
+        <h1 className="mt-3 text-4xl font-black md:text-5xl">
+          YOUR CART
+        </h1>
 
         {cartItems.length === 0 ? (
-          <div className="mt-12 bg-white p-10 text-center shadow-sm">
-            <h2 className="text-2xl font-black">
+          <div className="mt-10 bg-white p-10 text-center shadow-sm">
+            <h2 className="text-3xl font-black">
               YOUR CART IS EMPTY
             </h2>
 
-            <p className="mt-3 text-gray-600">
-              Add a product to your cart to continue.
+            <p className="mt-4 text-gray-600">
+              Cart එකට තවම product එකක් add කරලා නැහැ.
             </p>
 
             <a
               href="/#shop"
-              className="mt-8 inline-block bg-black px-8 py-4 font-bold text-white hover:bg-gray-800"
+              className="mt-8 inline-block bg-black px-8 py-4 font-bold text-white transition hover:bg-gray-800"
             >
-              SHOP NOW
+              GO TO SHOP
             </a>
           </div>
         ) : (
-          <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
-            <div className="space-y-8">
-              {/* Cart Items */}
-              <div className="space-y-5">
-                {cartItems.map((item, index) => (
-                  <div
-                    key={`${item.id}-${item.size}-${index}`}
-                    className="grid gap-5 bg-white p-5 shadow-sm sm:grid-cols-[140px_1fr]"
+          <div className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+            {/* Cart Items */}
+            <div className="space-y-6">
+              <div className="bg-white p-6 shadow-sm md:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <h2 className="text-2xl font-black">
+                    CART ITEMS
+                  </h2>
+
+                  <button
+                    type="button"
+                    onClick={clearCart}
+                    className="border border-red-600 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-600 hover:text-white"
                   >
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="aspect-square w-full object-cover"
-                    />
+                    CLEAR CART
+                  </button>
+                </div>
 
-                    <div className="flex flex-col justify-between">
-                      <div>
-                        <h2 className="text-xl font-black">
-                          {item.name}
-                        </h2>
+                <div className="mt-7 space-y-6">
+                  {cartItems.map(
+                    (item, index) => {
+                      const itemTotal =
+                        item.price *
+                        item.quantity;
 
-                        <p className="mt-2 text-gray-600">
-                          Size: {item.size}
-                        </p>
+                      const selectedColour =
+                        item.color?.trim() ||
+                        "Not selected";
 
-                        <p className="mt-1 font-bold">
-                          Rs. {item.price.toLocaleString()}
-                        </p>
-                      </div>
-
-                      <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex items-center border border-gray-300">
-                          <button
-                            onClick={() =>
-                              decreaseQuantity(index)
-                            }
-                            className="h-11 w-11 text-xl hover:bg-gray-100"
-                          >
-                            −
-                          </button>
-
-                          <span className="flex h-11 w-12 items-center justify-center font-bold">
-                            {item.quantity}
-                          </span>
-
-                          <button
-                            onClick={() =>
-                              increaseQuantity(index)
-                            }
-                            className="h-11 w-11 text-xl hover:bg-gray-100"
-                          >
-                            +
-                          </button>
-                        </div>
-
-                        <button
-                          onClick={() => removeItem(index)}
-                          className="font-semibold text-red-600 hover:underline"
+                      return (
+                        <div
+                          key={`${item.id}-${item.colorSlug || selectedColour}-${item.size}-${index}`}
+                          className="border-b pb-6 last:border-b-0 last:pb-0"
                         >
-                          REMOVE
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                          <div className="flex flex-col gap-5 sm:flex-row">
+                            <div className="w-full overflow-hidden bg-gray-100 sm:w-36">
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="aspect-square h-full w-full object-cover"
+                              />
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="flex flex-col justify-between gap-4 sm:flex-row">
+                                <div>
+                                  <h3 className="text-xl font-black">
+                                    {item.name}
+                                  </h3>
+
+                                  <div className="mt-3 space-y-1 text-sm text-gray-600">
+                                    <p>
+                                      Colour:{" "}
+                                      <span className="font-bold text-black">
+                                        {selectedColour}
+                                      </span>
+                                    </p>
+
+                                    <p>
+                                      Size:{" "}
+                                      <span className="font-bold text-black">
+                                        {item.size}
+                                      </span>
+                                    </p>
+
+                                    <p>
+                                      Unit Price:{" "}
+                                      <span className="font-bold text-black">
+                                        Rs.{" "}
+                                        {item.price.toLocaleString()}
+                                      </span>
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <p className="text-xl font-black">
+                                  Rs.{" "}
+                                  {itemTotal.toLocaleString()}
+                                </p>
+                              </div>
+
+                              <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex items-center border border-gray-300">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      decreaseQuantity(
+                                        index
+                                      )
+                                    }
+                                    className="h-11 w-11 text-xl transition hover:bg-gray-100"
+                                  >
+                                    −
+                                  </button>
+
+                                  <span className="flex h-11 min-w-12 items-center justify-center font-bold">
+                                    {item.quantity}
+                                  </span>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      increaseQuantity(
+                                        index
+                                      )
+                                    }
+                                    className="h-11 w-11 text-xl transition hover:bg-gray-100"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeItem(index)
+                                  }
+                                  className="text-sm font-bold text-red-600 underline underline-offset-4"
+                                >
+                                  REMOVE
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
               </div>
 
-              {/* Customer Form */}
-              <div className="bg-white p-6 shadow-sm">
-                <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
-                  DELIVERY DETAILS
-                </p>
-
-                <h2 className="mt-2 text-2xl font-black">
-                  CUSTOMER INFORMATION
+              {/* Total Summary */}
+              <div className="bg-white p-6 shadow-sm md:p-8">
+                <h2 className="text-2xl font-black">
+                  ORDER SUMMARY
                 </h2>
 
-                <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="mb-2 block text-sm font-bold">
-                      FULL NAME
-                    </label>
+                <div className="mt-6 space-y-4">
+                  <div className="flex justify-between border-b pb-4">
+                    <span className="text-gray-600">
+                      Total Quantity
+                    </span>
 
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(event) =>
-                        setCustomerName(event.target.value)
-                      }
-                      placeholder="Enter your full name"
-                      className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                    />
+                    <span className="font-bold">
+                      {totalQuantity}
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-bold">
-                      PRIMARY PHONE NUMBER
-                    </label>
+                  <div className="flex justify-between border-b pb-4">
+                    <span className="text-gray-600">
+                      Subtotal
+                    </span>
 
-                    <input
-                      type="tel"
-                      value={primaryPhone}
-                      onChange={(event) =>
-                        setPrimaryPhone(event.target.value)
-                      }
-                      placeholder="07XXXXXXXX"
-                      className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                    />
+                    <span className="font-bold">
+                      Rs.{" "}
+                      {subtotal.toLocaleString()}
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-bold">
-                      ALTERNATIVE PHONE NUMBER
-                    </label>
+                  <div className="flex justify-between border-b pb-4">
+                    <span className="text-gray-600">
+                      Delivery Fee
+                    </span>
 
-                    <input
-                      type="tel"
-                      value={alternativePhone}
-                      onChange={(event) =>
-                        setAlternativePhone(event.target.value)
-                      }
-                      placeholder="07XXXXXXXX (Optional)"
-                      className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                    />
+                    <span className="text-right font-bold">
+                      {hasFixedDeliveryFee
+                        ? `Rs. ${deliveryFee.toLocaleString()}`
+                        : "Confirm via WhatsApp"}
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-bold">
-                      DISTRICT
-                    </label>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-lg font-black">
+                      {hasFixedDeliveryFee
+                        ? "FINAL TOTAL"
+                        : "SUBTOTAL"}
+                    </span>
 
-                    <input
-                      type="text"
-                      value={district}
-                      onChange={(event) =>
-                        setDistrict(event.target.value)
-                      }
-                      placeholder="Example: Galle"
-                      className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="mb-2 block text-sm font-bold">
-                      DELIVERY ADDRESS
-                    </label>
-
-                    <textarea
-                      value={address}
-                      onChange={(event) =>
-                        setAddress(event.target.value)
-                      }
-                      placeholder="Enter your full delivery address"
-                      rows={4}
-                      className="w-full resize-none border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                    />
+                    <span className="text-2xl font-black">
+                      Rs.{" "}
+                      {(hasFixedDeliveryFee
+                        ? finalTotal
+                        : subtotal
+                      ).toLocaleString()}
+                    </span>
                   </div>
                 </div>
+
+                {!hasFixedDeliveryFee && (
+                  <div className="mt-6 border border-orange-200 bg-orange-50 p-4 text-sm font-semibold leading-6 text-orange-700">
+                    මුළු quantity එක 5ට වැඩි නිසා delivery fee සහ final total එක WhatsApp එකෙන් confirm කරනවා.
+                  </div>
+                )}
+
+                <p className="mt-5 text-sm text-gray-500">
+                  Products 1–5 සඳහා delivery fee එක Rs. 350යි.
+                </p>
               </div>
             </div>
 
-            {/* Order Summary */}
-            <aside className="h-fit bg-black p-7 text-white">
+            {/* Customer Details */}
+            <form
+              onSubmit={sendWhatsAppOrder}
+              className="h-fit bg-white p-6 shadow-sm md:p-8"
+            >
               <h2 className="text-2xl font-black">
-                ORDER SUMMARY
+                CUSTOMER DETAILS
               </h2>
 
-              <div className="mt-7 flex justify-between border-b border-white/20 pb-5">
-                <span>Total Items</span>
-                <span>{totalItems}</span>
-              </div>
+              <p className="mt-3 text-sm text-gray-500">
+                Phone numbers දෙකම අනිවාර්යයි.
+              </p>
 
-              <div className="flex justify-between border-b border-white/20 py-5">
-                <span>Subtotal</span>
-                <span>
-                  Rs. {subtotal.toLocaleString()}
-                </span>
-              </div>
+              <div className="mt-7 space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm font-bold">
+                    FULL NAME *
+                  </label>
 
-              <div className="border-b border-white/20 py-5">
-                <div className="flex justify-between gap-4">
-                  <span>Delivery</span>
-
-                  <span className="text-right">
-                    {hasFixedDeliveryFee
-                      ? `Rs. ${deliveryFee.toLocaleString()}`
-                      : "Confirm via WhatsApp"}
-                  </span>
+                  <input
+                    type="text"
+                    required
+                    value={customerName}
+                    onChange={(event) =>
+                      setCustomerName(
+                        event.target.value
+                      )
+                    }
+                    placeholder="ඔයාගේ සම්පූර්ණ නම"
+                    autoComplete="name"
+                    className="w-full border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  />
                 </div>
 
-                {totalItems > 5 && (
-                  <p className="mt-3 text-sm leading-6 text-gray-300">
-                    Orders above 5 T-shirts have a custom
-                    delivery fee. Please confirm it through
-                    WhatsApp chat.
+                <div>
+                  <label className="mb-2 block text-sm font-bold">
+                    PRIMARY PHONE NUMBER *
+                  </label>
+
+                  <input
+                    type="tel"
+                    required
+                    value={primaryPhone}
+                    onChange={(event) =>
+                      setPrimaryPhone(
+                        event.target.value
+                      )
+                    }
+                    placeholder="07XXXXXXXX"
+                    autoComplete="tel"
+                    className="w-full border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold">
+                    ALTERNATIVE PHONE NUMBER *
+                  </label>
+
+                  <input
+                    type="tel"
+                    required
+                    value={alternativePhone}
+                    onChange={(event) =>
+                      setAlternativePhone(
+                        event.target.value
+                      )
+                    }
+                    placeholder="07XXXXXXXX"
+                    className="w-full border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  />
+
+                  <p className="mt-2 text-xs text-gray-500">
+                    Primary number එකට වෙනස් contact number එකක් දාන්න.
                   </p>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold">
+                    DISTRICT *
+                  </label>
+
+                  <select
+                    required
+                    value={district}
+                    onChange={(event) =>
+                      setDistrict(
+                        event.target.value
+                      )
+                    }
+                    className="w-full border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-black"
+                  >
+                    <option value="">
+                      Select district
+                    </option>
+
+                    {districts.map(
+                      (districtName) => (
+                        <option
+                          key={districtName}
+                          value={districtName}
+                        >
+                          {districtName}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold">
+                    DELIVERY ADDRESS *
+                  </label>
+
+                  <textarea
+                    required
+                    value={address}
+                    onChange={(event) =>
+                      setAddress(
+                        event.target.value
+                      )
+                    }
+                    rows={4}
+                    placeholder="ගෙදර අංකය, පාර, නගරය"
+                    autoComplete="street-address"
+                    className="w-full resize-none border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold">
+                    SPECIAL NOTE — OPTIONAL
+                  </label>
+
+                  <textarea
+                    value={note}
+                    onChange={(event) =>
+                      setNote(
+                        event.target.value
+                      )
+                    }
+                    rows={3}
+                    placeholder="Order එක ගැන විශේෂ සටහනක් තිබේ නම්"
+                    className="w-full resize-none border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  />
+                </div>
+
+                {errorMessage && (
+                  <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                    {errorMessage}
+                  </div>
                 )}
-              </div>
 
-              <div className="flex justify-between py-6 text-xl font-black">
-                <span>
-                  {hasFixedDeliveryFee
-                    ? "FINAL TOTAL"
-                    : "SUBTOTAL"}
-                </span>
+                <button
+                  type="submit"
+                  className="flex w-full items-center justify-center gap-3 bg-green-600 px-6 py-4 font-black text-white transition hover:bg-green-700"
+                >
+                  <FaWhatsapp className="text-2xl" />
 
-                <span>
-                  Rs.{" "}
-                  {(hasFixedDeliveryFee
-                    ? finalTotal
-                    : subtotal
-                  ).toLocaleString()}
-                </span>
-              </div>
+                  SEND CART ORDER VIA WHATSAPP
+                </button>
 
-              {!formComplete && (
-                <p className="mb-4 text-sm leading-6 text-yellow-300">
-                  Fill in your name, primary phone number,
-                  district and address before checkout.
+                <p className="text-center text-xs leading-5 text-gray-500">
+                  Cart products, colours, sizes, delivery fee සහ customer details සියල්ල WhatsApp message එකට යනවා.
                 </p>
-              )}
-
-              <a
-                href={
-                  formComplete
-                    ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
-                    : "#"
-                }
-                target={formComplete ? "_blank" : undefined}
-                rel={
-                  formComplete
-                    ? "noopener noreferrer"
-                    : undefined
-                }
-                onClick={(event) => {
-                  if (!formComplete) {
-                    event.preventDefault();
-
-                    alert(
-                      "Please fill in your name, primary phone number, district and address."
-                    );
-                  }
-                }}
-                className={`block w-full px-5 py-4 text-center font-black transition ${
-                  formComplete
-                    ? "bg-white text-black hover:bg-gray-200"
-                    : "cursor-not-allowed bg-gray-600 text-gray-300"
-                }`}
-              >
-                CHECKOUT ON WHATSAPP
-              </a>
-            </aside>
+              </div>
+            </form>
           </div>
         )}
       </section>
