@@ -7,11 +7,15 @@ export const productSizes = [
   "XXL",
 ] as const;
 
-export type ProductSize = (typeof productSizes)[number];
+export type ProductSize =
+  (typeof productSizes)[number];
 
 export type ProductType = "tshirt" | "pants";
 
-export type ProductStock = Record<ProductSize, number>;
+export type ProductStock = Record<
+  ProductSize,
+  number
+>;
 
 export type TshirtMeasurement = {
   chest: number;
@@ -42,7 +46,13 @@ type ProductBase = {
   name: string;
   shortName: string;
   price: number;
+
+  // Homepage සහ cart එකට main photo එක
   image: string;
+
+  // Product page gallery එකට photos කිහිපයක්
+  images: string[];
+
   description: string;
   stock: ProductStock;
   features: string[];
@@ -58,79 +68,83 @@ export type PantsProduct = ProductBase & {
   sizeGuide: PantsSizeGuide;
 };
 
-export type Product = TshirtProduct | PantsProduct;
+export type Product =
+  | TshirtProduct
+  | PantsProduct;
 
-export const defaultTshirtSizeGuide: TshirtSizeGuide = {
-  XS: {
-    chest: 38,
-    length: 26,
-    sleeve: 8,
-  },
-  S: {
-    chest: 40,
-    length: 27,
-    sleeve: 8.5,
-  },
-  M: {
-    chest: 42,
-    length: 28,
-    sleeve: 9,
-  },
-  L: {
-    chest: 44,
-    length: 29,
-    sleeve: 9.5,
-  },
-  XL: {
-    chest: 46,
-    length: 30,
-    sleeve: 10,
-  },
-  XXL: {
-    chest: 48,
-    length: 31,
-    sleeve: 10.5,
-  },
-};
+export const defaultTshirtSizeGuide: TshirtSizeGuide =
+  {
+    XS: {
+      chest: 38,
+      length: 26,
+      sleeve: 8,
+    },
+    S: {
+      chest: 40,
+      length: 27,
+      sleeve: 8.5,
+    },
+    M: {
+      chest: 42,
+      length: 28,
+      sleeve: 9,
+    },
+    L: {
+      chest: 44,
+      length: 29,
+      sleeve: 9.5,
+    },
+    XL: {
+      chest: 46,
+      length: 30,
+      sleeve: 10,
+    },
+    XXL: {
+      chest: 48,
+      length: 31,
+      sleeve: 10.5,
+    },
+  };
 
-export const defaultPantsSizeGuide: PantsSizeGuide = {
-  XS: {
-    waist: 26,
-    hip: 36,
-    length: 38,
-    thigh: 20,
-  },
-  S: {
-    waist: 28,
-    hip: 38,
-    length: 39,
-    thigh: 21,
-  },
-  M: {
-    waist: 30,
-    hip: 40,
-    length: 40,
-    thigh: 22,
-  },
-  L: {
-    waist: 32,
-    hip: 42,
-    length: 41,
-    thigh: 23,
-  },
-  XL: {
-    waist: 34,
-    hip: 44,
-    length: 42,
-    thigh: 24,
-  },
-  XXL: {
-    waist: 36,
-    hip: 46,
-    length: 43,
-    thigh: 25,
-  },
-};
+export const defaultPantsSizeGuide: PantsSizeGuide =
+  {
+    XS: {
+      waist: 26,
+      hip: 36,
+      length: 38,
+      thigh: 20,
+    },
+    S: {
+      waist: 28,
+      hip: 38,
+      length: 39,
+      thigh: 21,
+    },
+    M: {
+      waist: 30,
+      hip: 40,
+      length: 40,
+      thigh: 22,
+    },
+    L: {
+      waist: 32,
+      hip: 42,
+      length: 41,
+      thigh: 23,
+    },
+    XL: {
+      waist: 34,
+      hip: 44,
+      length: 42,
+      thigh: 24,
+    },
+    XXL: {
+      waist: 36,
+      hip: 46,
+      length: 43,
+      thigh: 25,
+    },
+  };
 
 export const products: Product[] = [
   {
@@ -140,9 +154,19 @@ export const products: Product[] = [
     shortName: "Black Tee",
     productType: "tshirt",
     price: 3650,
+
     image: "/images/TSHIRT1.jpg",
+
+    images: [
+      "/images/TSHIRT1.jpg",
+      "/images/black-tee-2.jpg",
+      "/images/black-tee-3.jpg",
+      "/images/black-tee-4.jpg",
+    ],
+
     description:
       "Premium oversized black T-shirt made with 240 GSM heavy cotton. Designed for comfort, durability and a bold streetwear look.",
+
     stock: {
       XS: 2,
       S: 4,
@@ -151,12 +175,14 @@ export const products: Product[] = [
       XL: 1,
       XXL: 0,
     },
+
     features: [
       "240 GSM heavy cotton",
       "Premium oversized fit",
       "High-quality print and finishing",
       "Islandwide delivery",
     ],
+
     sizeGuide: defaultTshirtSizeGuide,
   },
 
@@ -167,9 +193,19 @@ export const products: Product[] = [
     shortName: "White Tee",
     productType: "tshirt",
     price: 3650,
+
     image: "/images/TSHIRT2.jpg",
+
+    images: [
+      "/images/TSHIRT2.jpg",
+      "/images/white-tee-2.jpg",
+      "/images/white-tee-3.jpg",
+      "/images/white-tee-4.jpg",
+    ],
+
     description:
       "Premium oversized white T-shirt made with 240 GSM heavy cotton. Designed for comfort, durability and a clean streetwear look.",
+
     stock: {
       XS: 3,
       S: 5,
@@ -178,12 +214,14 @@ export const products: Product[] = [
       XL: 2,
       XXL: 0,
     },
+
     features: [
       "240 GSM heavy cotton",
       "Premium oversized fit",
       "High-quality print and finishing",
       "Islandwide delivery",
     ],
+
     sizeGuide: defaultTshirtSizeGuide,
   },
 
@@ -194,9 +232,19 @@ export const products: Product[] = [
     shortName: "Grey Tee",
     productType: "tshirt",
     price: 3650,
+
     image: "/images/TSHIRT3.jpg",
+
+    images: [
+      "/images/TSHIRT3.jpg",
+      "/images/grey-tee-2.jpg",
+      "/images/grey-tee-3.jpg",
+      "/images/grey-tee-4.jpg",
+    ],
+
     description:
       "Premium oversized dark grey T-shirt made with 240 GSM heavy cotton. Designed for comfort, durability and a bold streetwear look.",
+
     stock: {
       XS: 2,
       S: 4,
@@ -205,12 +253,14 @@ export const products: Product[] = [
       XL: 2,
       XXL: 0,
     },
+
     features: [
       "240 GSM heavy cotton",
       "Premium oversized fit",
       "High-quality print and finishing",
       "Islandwide delivery",
     ],
+
     sizeGuide: defaultTshirtSizeGuide,
   },
 
@@ -221,9 +271,19 @@ export const products: Product[] = [
     shortName: "Red Tee",
     productType: "tshirt",
     price: 3650,
+
     image: "/images/red-tee.jpg",
+
+    images: [
+      "/images/red-tee.jpg",
+      "/images/red-tee-2.jpg",
+      "/images/red-tee-3.jpg",
+      "/images/red-tee-4.jpg",
+    ],
+
     description:
       "Premium oversized red T-shirt made with 240 GSM heavy cotton. Designed for comfort, durability and a bold streetwear look.",
+
     stock: {
       XS: 2,
       S: 4,
@@ -232,16 +292,17 @@ export const products: Product[] = [
       XL: 2,
       XXL: 0,
     },
+
     features: [
       "240 GSM heavy cotton",
       "Premium oversized fit",
       "High-quality print and finishing",
       "Islandwide delivery",
     ],
+
     sizeGuide: defaultTshirtSizeGuide,
   },
 
-  // Sample pants product
   {
     id: "black-cargo-pants",
     slug: "black-cargo-pants",
@@ -249,9 +310,19 @@ export const products: Product[] = [
     shortName: "Cargo Pants",
     productType: "pants",
     price: 4950,
+
     image: "/images/Mens Bottom.jpg",
+
+    images: [
+      "/images/Mens Bottom.jpg",
+      "/images/black-cargo-2.jpg",
+      "/images/black-cargo-3.jpg",
+      "/images/black-cargo-4.jpg",
+    ],
+
     description:
       "Premium black cargo pants designed for comfort, durability and a modern streetwear look.",
+
     stock: {
       XS: 2,
       S: 4,
@@ -260,12 +331,14 @@ export const products: Product[] = [
       XL: 2,
       XXL: 1,
     },
+
     features: [
       "Premium durable fabric",
       "Relaxed streetwear fit",
       "Multiple utility pockets",
       "Islandwide delivery",
     ],
+
     sizeGuide: defaultPantsSizeGuide,
   },
 ];
