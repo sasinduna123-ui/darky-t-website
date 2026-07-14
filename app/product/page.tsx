@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
+import CartCount from "@/app/components/CartCount";
+import SizeGuide from "@/app/components/SizeGuide";
 
 type CartItem = {
   id: string;
@@ -45,6 +47,7 @@ export default function ProductPage() {
 
     try {
       const savedCart = localStorage.getItem("darky-cart");
+
       const cart: CartItem[] = savedCart
         ? JSON.parse(savedCart)
         : [];
@@ -67,6 +70,10 @@ export default function ProductPage() {
       localStorage.setItem(
         "darky-cart",
         JSON.stringify(cart)
+      );
+
+      window.dispatchEvent(
+        new Event("darky-cart-updated")
       );
 
       alert("Product added to cart!");
@@ -111,12 +118,7 @@ export default function ProductPage() {
         </a>
 
         <div className="flex items-center gap-4 sm:gap-5">
-          <a
-            href="/cart"
-            className="text-xs font-semibold hover:text-gray-500 sm:text-sm"
-          >
-            CART
-          </a>
+          <CartCount />
 
           <a
             href="/"
@@ -138,7 +140,7 @@ export default function ProductPage() {
           />
         </div>
 
-        {/* Product Information */}
+        {/* Product Details */}
         <div className="flex flex-col justify-center">
           <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
             DARKY T COLLECTION
@@ -160,9 +162,13 @@ export default function ProductPage() {
 
           {/* Size Selection */}
           <div className="mt-8">
-            <p className="mb-3 font-bold">
-              SELECT SIZE
-            </p>
+            <div className="mb-3 flex items-center justify-between gap-4">
+              <p className="font-bold">
+                SELECT SIZE
+              </p>
+
+              <SizeGuide />
+            </div>
 
             <div className="flex flex-wrap gap-3">
               {["XS", "S", "M", "L", "XL", "XXL"].map(
@@ -260,7 +266,7 @@ export default function ProductPage() {
             </span>
           </div>
 
-          {/* Add to Cart */}
+          {/* Add To Cart */}
           <button
             onClick={addToCart}
             disabled={isOutOfStock}
@@ -275,7 +281,7 @@ export default function ProductPage() {
               : "ADD TO CART"}
           </button>
 
-          {/* Direct Order Button */}
+          {/* Direct Order */}
           <button
             onClick={directOrder}
             disabled={isOutOfStock}
@@ -296,7 +302,7 @@ export default function ProductPage() {
             </span>
           </button>
 
-          {/* Product Features */}
+          {/* Features */}
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
             <p>✓ 240 GSM heavy cotton</p>
             <p>✓ Premium oversized fit</p>
