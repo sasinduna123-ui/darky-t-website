@@ -8,15 +8,6 @@ import CartCount from "@/app/components/CartCount";
 import SizeGuide from "@/app/components/SizeGuide";
 import { getProductBySlug } from "@/app/data/products";
 
-type CartItem = {
-  id: string;
-  name: string;
-  image: string;
-  size: string;
-  price: number;
-  quantity: number;
-};
-
 const productSizes = [
   "XS",
   "S",
@@ -28,27 +19,52 @@ const productSizes = [
 
 type ProductSize = (typeof productSizes)[number];
 
+type CartItem = {
+  id: string;
+  name: string;
+  image: string;
+  color: string;
+  colorSlug: string;
+  size: string;
+  price: number;
+  quantity: number;
+};
+
 export default function DynamicProductPage() {
   const params = useParams();
-  const slug = String(params.slug);
+
+  const slug =
+    typeof params.slug === "string"
+      ? params.slug
+      : Array.isArray(params.slug)
+        ? params.slug[0]
+        : "";
 
   const foundProduct = getProductBySlug(slug);
+
+  const [selectedVariantIndex, setSelectedVariantIndex] =
+    useState(0);
+
+  const [selectedImageIndex, setSelectedImageIndex] =
+    useState(0);
 
   const [selectedSize, setSelectedSize] =
     useState<ProductSize>("M");
 
   const [quantity, setQuantity] = useState(1);
 
-  const [selectedImageIndex, setSelectedImageIndex] =
-    useState(0);
-
   useEffect(() => {
+    setSelectedVariantIndex(0);
     setSelectedImageIndex(0);
     setSelectedSize("M");
     setQuantity(1);
   }, [slug]);
 
-  if (!foundProduct) {
+  const foundVariant =
+    foundProduct?.variants[selectedVariantIndex] ??
+    foundProduct?.variants[0];
+
+  if (!foundProduct || !foundVariant) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-black">
         <div>
@@ -71,50 +87,79 @@ export default function DynamicProductPage() {
     );
   }
 
+  /*
+    මේ aliases දෙක නිසා TypeScript එකට
+    product සහ variant undefined නොවන බව පැහැදිලි වෙනවා.
+  */
   const product = foundProduct;
+  const currentVariant = foundVariant;
 
   const galleryImages =
-    product.images && product.images.length > 0
-      ? product.images
+    currentVariant.images.length > 0
+      ? currentVariant.images
       : [product.image];
 
   const safeImageIndex =
+    selectedImageIndex >= 0 &&
     selectedImageIndex < galleryImages.length
       ? selectedImageIndex
       : 0;
 
-  const selectedImage = galleryImages[safeImageIndex];
+  const selectedImage =
+    galleryImages[safeImageIndex] ?? product.image;
 
   const selectedStock =
-    product.stock[selectedSize] ?? 0;
+    currentVariant.stock[selectedSize] ?? 0;
 
   const isOutOfStock = selectedStock === 0;
 
   const total = product.price * quantity;
 
+  function changeVariant(index: number) {
+    setSelectedVariantIndex(index);
+    setSelectedImageIndex(0);
+    setSelectedSize("M");
+    setQuantity(1);
+  }
+
   function showPreviousImage() {
-    setSelectedImageIndex((currentIndex) =>
-      currentIndex === 0
+    setSelectedImageIndex((currentIndex) => {
+      if (galleryImages.length <= 1) {
+        return 0;
+      }
+
+      return currentIndex === 0
         ? galleryImages.length - 1
-        : currentIndex - 1
-    );
+        : currentIndex - 1;
+    });
   }
 
   function showNextImage() {
-    setSelectedImageIndex((currentIndex) =>
-      currentIndex === galleryImages.length - 1
+    setSelectedImageIndex((currentIndex) => {
+      if (galleryImages.length <= 1) {
+        return 0;
+      }
+
+      return currentIndex === galleryImages.length - 1
         ? 0
-        : currentIndex + 1
-    );
+        : currentIndex + 1;
+    });
   }
 
   function addToCart() {
-    if (isOutOfStock) return;
+    if (isOutOfStock) {
+      return;
+    }
+
+    const cartImage =
+      currentVariant.images[0] || product.image;
 
     const newItem: CartItem = {
       id: product.id,
       name: product.name,
-      image: product.image,
+      image: cartImage,
+      color: currentVariant.name,
+      colorSlug: currentVariant.slug,
       size: selectedSize,
       price: product.price,
       quantity,
@@ -131,13 +176,17 @@ export default function DynamicProductPage() {
       const existingIndex = cart.findIndex(
         (item) =>
           item.id === newItem.id &&
+          item.colorSlug === newItem.colorSlug &&
           item.size === newItem.size
       );
 
       if (existingIndex >= 0) {
+        const existingQuantity =
+          cart[existingIndex].quantity;
+
         cart[existingIndex].quantity = Math.min(
           selectedStock,
-          cart[existingIndex].quantity + quantity
+          existingQuantity + quantity
         );
       } else {
         cart.push(newItem);
@@ -152,19 +201,30 @@ export default function DynamicProductPage() {
         new Event("darky-cart-updated")
       );
 
-      alert("Product added to cart!");
+      alert(
+        `${product.name} - ${currentVariant.name} cart එකට add කළා.`
+      );
     } catch {
-      alert("Could not add product to cart.");
+      alert(
+        "Product එක cart එකට add කරන්න බැරි වුණා."
+      );
     }
   }
 
   function directOrder() {
-    if (isOutOfStock) return;
+    if (isOutOfStock) {
+      return;
+    }
+
+    const orderImage =
+      currentVariant.images[0] || product.image;
 
     const directOrderItem: CartItem = {
       id: product.id,
       name: product.name,
-      image: product.image,
+      image: orderImage,
+      color: currentVariant.name,
+      colorSlug: currentVariant.slug,
       size: selectedSize,
       price: product.price,
       quantity,
@@ -179,7 +239,7 @@ export default function DynamicProductPage() {
       window.location.href = "/direct-order";
     } catch {
       alert(
-        "Could not continue to delivery details."
+        "Delivery details page එකට යන්න බැරි වුණා."
       );
     }
   }
@@ -215,9 +275,7 @@ export default function DynamicProductPage() {
           <div className="relative overflow-hidden bg-gray-100">
             <img
               src={selectedImage}
-              alt={`${product.name} photo ${
-                safeImageIndex + 1
-              }`}
+              alt={`${product.name} ${currentVariant.name}`}
               className="aspect-square w-full object-cover"
             />
 
@@ -259,13 +317,13 @@ export default function DynamicProductPage() {
                   onClick={() =>
                     setSelectedImageIndex(index)
                   }
+                  aria-label={`Show product image ${
+                    index + 1
+                  }`}
                   className={`overflow-hidden border-2 bg-gray-100 transition ${
                     safeImageIndex === index
                       ? "border-black"
                       : "border-transparent hover:border-gray-400"
-                  }`}
-                  aria-label={`Show product image ${
-                    index + 1
                   }`}
                 >
                   <img
@@ -299,6 +357,83 @@ export default function DynamicProductPage() {
             {product.description}
           </p>
 
+          {/* Colour Selection */}
+          <div className="mt-8">
+            <p className="font-bold">
+              SELECT COLOUR
+            </p>
+
+            <p className="mt-2 text-sm text-gray-500">
+              Selected:{" "}
+              <span className="font-bold text-black">
+                {currentVariant.name}
+              </span>
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-4">
+              {product.variants.map(
+                (variant, index) => {
+                  const isSelected =
+                    index === selectedVariantIndex;
+
+                  const totalVariantStock =
+                    Object.values(
+                      variant.stock
+                    ).reduce(
+                      (sum, stockAmount) =>
+                        sum + stockAmount,
+                      0
+                    );
+
+                  const variantOutOfStock =
+                    totalVariantStock === 0;
+
+                  return (
+                    <button
+                      key={`${variant.slug}-${index}`}
+                      type="button"
+                      onClick={() =>
+                        changeVariant(index)
+                      }
+                      className="group flex flex-col items-center gap-2"
+                      aria-label={`Select ${variant.name}`}
+                    >
+                      <span
+                        className={`relative flex h-12 w-12 items-center justify-center rounded-full border-2 transition ${
+                          isSelected
+                            ? "border-black"
+                            : "border-gray-300 group-hover:border-gray-600"
+                        }`}
+                      >
+                        <span
+                          className="h-9 w-9 rounded-full border border-gray-300"
+                          style={{
+                            backgroundColor:
+                              variant.hex,
+                          }}
+                        />
+
+                        {variantOutOfStock && (
+                          <span className="absolute h-px w-10 rotate-45 bg-red-600" />
+                        )}
+                      </span>
+
+                      <span
+                        className={`max-w-20 text-center text-xs ${
+                          isSelected
+                            ? "font-black text-black"
+                            : "font-semibold text-gray-500"
+                        }`}
+                      >
+                        {variant.name}
+                      </span>
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          </div>
+
           {/* Size Selection */}
           <div className="mt-8">
             <div className="mb-3 flex items-center justify-between gap-4">
@@ -322,7 +457,7 @@ export default function DynamicProductPage() {
             <div className="flex flex-wrap gap-3">
               {productSizes.map((size) => {
                 const stock =
-                  product.stock[size] ?? 0;
+                  currentVariant.stock[size] ?? 0;
 
                 const soldOut = stock === 0;
 
@@ -357,8 +492,8 @@ export default function DynamicProductPage() {
               }`}
             >
               {isOutOfStock
-                ? "OUT OF STOCK"
-                : `Only ${selectedStock} left in stock`}
+                ? `${currentVariant.name} - ${selectedSize} OUT OF STOCK`
+                : `${currentVariant.name} - ${selectedSize}: Only ${selectedStock} left`}
             </p>
           </div>
 
@@ -462,7 +597,7 @@ export default function DynamicProductPage() {
 
           {/* Product Features */}
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
-            {product.features?.map(
+            {product.features.map(
               (feature, index) => (
                 <p key={`${feature}-${index}`}>
                   ✓ {feature}
