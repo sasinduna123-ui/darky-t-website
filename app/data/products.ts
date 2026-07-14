@@ -1,28 +1,42 @@
-export type ProductStock = {
-  XS: number;
-  S: number;
-  M: number;
-  L: number;
-  XL: number;
-  XXL: number;
-};
+export const productSizes = [
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+] as const;
 
-export type ProductMeasurements = {
+export type ProductSize = (typeof productSizes)[number];
+
+export type ProductType = "tshirt" | "pants";
+
+export type ProductStock = Record<ProductSize, number>;
+
+export type TshirtMeasurement = {
   chest: number;
   length: number;
   sleeve: number;
 };
 
-export type ProductSizeGuide = {
-  XS: ProductMeasurements;
-  S: ProductMeasurements;
-  M: ProductMeasurements;
-  L: ProductMeasurements;
-  XL: ProductMeasurements;
-  XXL: ProductMeasurements;
+export type PantsMeasurement = {
+  waist: number;
+  hip: number;
+  length: number;
+  thigh: number;
 };
 
-export type Product = {
+export type TshirtSizeGuide = Record<
+  ProductSize,
+  TshirtMeasurement
+>;
+
+export type PantsSizeGuide = Record<
+  ProductSize,
+  PantsMeasurement
+>;
+
+type ProductBase = {
   id: string;
   slug: string;
   name: string;
@@ -32,10 +46,21 @@ export type Product = {
   description: string;
   stock: ProductStock;
   features: string[];
-  sizeGuide: ProductSizeGuide;
 };
 
-const defaultSizeGuide: ProductSizeGuide = {
+export type TshirtProduct = ProductBase & {
+  productType: "tshirt";
+  sizeGuide: TshirtSizeGuide;
+};
+
+export type PantsProduct = ProductBase & {
+  productType: "pants";
+  sizeGuide: PantsSizeGuide;
+};
+
+export type Product = TshirtProduct | PantsProduct;
+
+export const defaultTshirtSizeGuide: TshirtSizeGuide = {
   XS: {
     chest: 38,
     length: 26,
@@ -68,12 +93,52 @@ const defaultSizeGuide: ProductSizeGuide = {
   },
 };
 
+export const defaultPantsSizeGuide: PantsSizeGuide = {
+  XS: {
+    waist: 26,
+    hip: 36,
+    length: 38,
+    thigh: 20,
+  },
+  S: {
+    waist: 28,
+    hip: 38,
+    length: 39,
+    thigh: 21,
+  },
+  M: {
+    waist: 30,
+    hip: 40,
+    length: 40,
+    thigh: 22,
+  },
+  L: {
+    waist: 32,
+    hip: 42,
+    length: 41,
+    thigh: 23,
+  },
+  XL: {
+    waist: 34,
+    hip: 44,
+    length: 42,
+    thigh: 24,
+  },
+  XXL: {
+    waist: 36,
+    hip: 46,
+    length: 43,
+    thigh: 25,
+  },
+};
+
 export const products: Product[] = [
   {
     id: "black-tee",
     slug: "black-tee",
     name: "Essential Black Tee",
     shortName: "Black Tee",
+    productType: "tshirt",
     price: 3650,
     image: "/images/TSHIRT1.jpg",
     description:
@@ -92,7 +157,7 @@ export const products: Product[] = [
       "High-quality print and finishing",
       "Islandwide delivery",
     ],
-    sizeGuide: defaultSizeGuide,
+    sizeGuide: defaultTshirtSizeGuide,
   },
 
   {
@@ -100,6 +165,7 @@ export const products: Product[] = [
     slug: "white-tee",
     name: "Heavy Cotton White Tee",
     shortName: "White Tee",
+    productType: "tshirt",
     price: 3650,
     image: "/images/TSHIRT2.jpg",
     description:
@@ -118,7 +184,7 @@ export const products: Product[] = [
       "High-quality print and finishing",
       "Islandwide delivery",
     ],
-    sizeGuide: defaultSizeGuide,
+    sizeGuide: defaultTshirtSizeGuide,
   },
 
   {
@@ -126,6 +192,7 @@ export const products: Product[] = [
     slug: "grey-tee",
     name: "Dark Grey Oversized Tee",
     shortName: "Grey Tee",
+    productType: "tshirt",
     price: 3650,
     image: "/images/TSHIRT3.jpg",
     description:
@@ -144,7 +211,7 @@ export const products: Product[] = [
       "High-quality print and finishing",
       "Islandwide delivery",
     ],
-    sizeGuide: defaultSizeGuide,
+    sizeGuide: defaultTshirtSizeGuide,
   },
 
   {
@@ -152,6 +219,7 @@ export const products: Product[] = [
     slug: "red-tee",
     name: "Red Oversized Tee",
     shortName: "Red Tee",
+    productType: "tshirt",
     price: 3650,
     image: "/images/red-tee.jpg",
     description:
@@ -170,10 +238,42 @@ export const products: Product[] = [
       "High-quality print and finishing",
       "Islandwide delivery",
     ],
-    sizeGuide: defaultSizeGuide,
+    sizeGuide: defaultTshirtSizeGuide,
+  },
+
+  // Sample pants product
+  {
+    id: "black-cargo-pants",
+    slug: "black-cargo-pants",
+    name: "Black Cargo Pants",
+    shortName: "Cargo Pants",
+    productType: "pants",
+    price: 4950,
+    image: "/images/Mens Bottom.jpg",
+    description:
+      "Premium black cargo pants designed for comfort, durability and a modern streetwear look.",
+    stock: {
+      XS: 2,
+      S: 4,
+      M: 5,
+      L: 4,
+      XL: 2,
+      XXL: 1,
+    },
+    features: [
+      "Premium durable fabric",
+      "Relaxed streetwear fit",
+      "Multiple utility pockets",
+      "Islandwide delivery",
+    ],
+    sizeGuide: defaultPantsSizeGuide,
   },
 ];
 
-export function getProductBySlug(slug: string) {
-  return products.find((product) => product.slug === slug);
+export function getProductBySlug(
+  slug: string
+): Product | undefined {
+  return products.find(
+    (product) => product.slug === slug
+  );
 }
