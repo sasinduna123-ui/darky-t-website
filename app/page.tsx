@@ -71,7 +71,7 @@ export default function Home() {
 />
 
         <h4 className="mt-5 text-lg font-bold">
-          Essential Black Tee
+          Arthur Morgan-RDR 2
         </h4>
 
         <p className="mt-1 text-gray-600">
@@ -94,7 +94,7 @@ export default function Home() {
 />
 
         <h4 className="mt-5 text-lg font-bold">
-          Heavy Cotton White Tee
+          Arthur Morgan-RDR 2
         </h4>
 
         <p className="mt-1 text-gray-600">
@@ -117,7 +117,7 @@ src="/images/TSHIRT3.jpg"
 />
 
         <h4 className="mt-5 text-lg font-bold">
-          Dark Grey Oversized Tee
+          Lara Coft-Tomb Raider
         </h4>
 
         <p className="mt-1 text-gray-600">
