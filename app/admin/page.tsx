@@ -7,6 +7,13 @@ type ProductType = "tshirt" | "pants";
 
 type Stock = Record<Size, number>;
 
+type ColourVariantForm = {
+  name: string;
+  hex: string;
+  images: string[];
+  stock: Stock;
+};
+
 type TshirtMeasurement = {
   chest: number;
   length: number;
@@ -25,14 +32,28 @@ type PantsSizeGuide = Record<Size, PantsMeasurement>;
 
 const sizes: Size[] = ["XS", "S", "M", "L", "XL", "XXL"];
 
-const initialStock: Stock = {
-  XS: 0,
-  S: 0,
-  M: 0,
-  L: 0,
-  XL: 0,
-  XXL: 0,
-};
+function createEmptyStock(): Stock {
+  return {
+    XS: 0,
+    S: 0,
+    M: 0,
+    L: 0,
+    XL: 0,
+    XXL: 0,
+  };
+}
+
+function createEmptyVariant(
+  name = "",
+  hex = "#000000"
+): ColourVariantForm {
+  return {
+    name,
+    hex,
+    images: ["", "", "", ""],
+    stock: createEmptyStock(),
+  };
+}
 
 const initialTshirtSizeGuide: TshirtSizeGuide = {
   XS: { chest: 38, length: 26, sleeve: 8 },
@@ -55,14 +76,14 @@ const initialPantsSizeGuide: PantsSizeGuide = {
 const tshirtFeatures = [
   "240 GSM heavy cotton",
   "Premium oversized fit",
-  "High-quality print and finishing",
+  "Available in multiple colours",
   "Islandwide delivery",
 ];
 
 const pantsFeatures = [
   "Premium durable fabric",
   "Relaxed streetwear fit",
-  "Multiple utility pockets",
+  "Available in multiple colours",
   "Islandwide delivery",
 ];
 
@@ -75,22 +96,22 @@ export default function AdminProductPage() {
   const [price, setPrice] = useState("3650");
   const [description, setDescription] = useState("");
 
-  const [images, setImages] = useState([
-    "",
-    "",
-    "",
-    "",
-  ]);
-
-  const [selectedPreviewImage, setSelectedPreviewImage] =
-    useState(0);
-
-  const [stock, setStock] = useState<Stock>({
-    ...initialStock,
-  });
-
   const [features, setFeatures] =
     useState<string[]>(tshirtFeatures);
+
+  const [variants, setVariants] = useState<
+    ColourVariantForm[]
+  >([createEmptyVariant("Black", "#000000")]);
+
+  const [
+    selectedPreviewVariant,
+    setSelectedPreviewVariant,
+  ] = useState(0);
+
+  const [
+    selectedPreviewImage,
+    setSelectedPreviewImage,
+  ] = useState(0);
 
   const [tshirtSizeGuide, setTshirtSizeGuide] =
     useState<TshirtSizeGuide>({
@@ -147,24 +168,82 @@ export default function AdminProductPage() {
 
   const slug = useMemo(() => createSlug(name), [name]);
 
-  const preparedImages = images.map(createImagePath);
+  const firstVariant =
+    variants[0] ?? createEmptyVariant("Black");
 
-  const availableImages = preparedImages.filter(
-    (image) => image !== ""
-  );
+  const firstVariantImages = firstVariant.images
+    .map(createImagePath)
+    .filter((image) => image !== "");
 
   const mainImage =
-    availableImages[0] || "/images/product-image.jpg";
+    firstVariantImages[0] ||
+    "/images/product-image.jpg";
+
+  const currentPreviewVariant =
+    variants[selectedPreviewVariant] ?? firstVariant;
+
+  const currentPreviewImages =
+    currentPreviewVariant.images
+      .map(createImagePath)
+      .filter((image) => image !== "");
 
   const previewImage =
-    availableImages[selectedPreviewImage] || mainImage;
+    currentPreviewImages[selectedPreviewImage] ||
+    currentPreviewImages[0] ||
+    mainImage;
 
-  const generatedImages =
-    availableImages.length > 0
-      ? availableImages
-      : ["/images/product-image.jpg"];
+  const variantsCode = variants
+    .map((variant, variantIndex) => {
+      const finalName =
+        escapeText(variant.name) ||
+        `Colour ${variantIndex + 1}`;
 
-  const imagesCode = generatedImages
+      const variantSlug =
+        createSlug(finalName) ||
+        `colour-${variantIndex + 1}`;
+
+      const finalHex =
+        variant.hex.trim() || "#000000";
+
+      const preparedImages = variant.images
+        .map(createImagePath)
+        .filter((image) => image !== "");
+
+      const finalImages =
+        preparedImages.length > 0
+          ? preparedImages
+          : ["/images/product-image.jpg"];
+
+      const imagesCode = finalImages
+        .map((image) => `        "${image}",`)
+        .join("\n");
+
+      return `    {
+      name: "${finalName}",
+      slug: "${variantSlug}",
+      hex: "${finalHex}",
+
+      images: [
+${imagesCode}
+      ],
+
+      stock: {
+        XS: ${variant.stock.XS},
+        S: ${variant.stock.S},
+        M: ${variant.stock.M},
+        L: ${variant.stock.L},
+        XL: ${variant.stock.XL},
+        XXL: ${variant.stock.XXL},
+      },
+    }`;
+    })
+    .join(",\n\n");
+
+  const firstImagesCode = (
+    firstVariantImages.length > 0
+      ? firstVariantImages
+      : ["/images/product-image.jpg"]
+  )
     .map((image) => `    "${image}",`)
     .join("\n");
 
@@ -243,38 +322,46 @@ export default function AdminProductPage() {
   const generatedCode = `{
   id: "${slug || "product-id"}",
   slug: "${slug || "product-slug"}",
+
   name: "${escapeText(name) || "Product Name"}",
+
   shortName: "${
     escapeText(shortName) ||
     escapeText(name) ||
     "Short Name"
   }",
+
   productType: "${productType}",
+
   price: ${Number(price) || 0},
 
   image: "${mainImage}",
 
   images: [
-${imagesCode}
+${firstImagesCode}
   ],
+
+  stock: {
+    XS: ${firstVariant.stock.XS},
+    S: ${firstVariant.stock.S},
+    M: ${firstVariant.stock.M},
+    L: ${firstVariant.stock.L},
+    XL: ${firstVariant.stock.XL},
+    XXL: ${firstVariant.stock.XXL},
+  },
 
   description:
     "${escapeText(description)}",
-
-  stock: {
-    XS: ${stock.XS},
-    S: ${stock.S},
-    M: ${stock.M},
-    L: ${stock.L},
-    XL: ${stock.XL},
-    XXL: ${stock.XXL},
-  },
 
   features: [
     "${escapeText(features[0] || "")}",
     "${escapeText(features[1] || "")}",
     "${escapeText(features[2] || "")}",
     "${escapeText(features[3] || "")}",
+  ],
+
+  variants: [
+${variantsCode}
   ],
 
   ${
@@ -288,34 +375,143 @@ ${imagesCode}
     setProductType(type);
 
     if (type === "tshirt") {
-      setFeatures([...tshirtFeatures]);
       setPrice("3650");
+      setFeatures([...tshirtFeatures]);
     } else {
-      setFeatures([...pantsFeatures]);
       setPrice("4950");
+      setFeatures([...pantsFeatures]);
     }
   }
 
-  function updateImage(index: number, value: string) {
-    setImages((current) =>
-      current.map((image, imageIndex) =>
-        imageIndex === index ? value : image
+  function addNewColour() {
+    setVariants((current) => [
+      ...current,
+      createEmptyVariant(
+        `Colour ${current.length + 1}`,
+        "#000000"
+      ),
+    ]);
+
+    setSelectedPreviewVariant(variants.length);
+    setSelectedPreviewImage(0);
+  }
+
+  function removeColour(index: number) {
+    if (variants.length === 1) {
+      alert(
+        "Product එකකට අවම වශයෙන් colour එකක් තිබිය යුතුයි."
+      );
+      return;
+    }
+
+    setVariants((current) =>
+      current.filter(
+        (_, variantIndex) => variantIndex !== index
       )
     );
+
+    setSelectedPreviewVariant((currentIndex) => {
+      if (currentIndex === index) {
+        return 0;
+      }
+
+      if (currentIndex > index) {
+        return currentIndex - 1;
+      }
+
+      return currentIndex;
+    });
 
     setSelectedPreviewImage(0);
   }
 
-  function updateStock(size: Size, value: string) {
-    const numberValue = Math.max(0, Number(value) || 0);
-
-    setStock((current) => ({
-      ...current,
-      [size]: numberValue,
-    }));
+  function updateVariantName(
+    index: number,
+    value: string
+  ) {
+    setVariants((current) =>
+      current.map((variant, variantIndex) =>
+        variantIndex === index
+          ? { ...variant, name: value }
+          : variant
+      )
+    );
   }
 
-  function updateFeature(index: number, value: string) {
+  function updateVariantHex(
+    index: number,
+    value: string
+  ) {
+    setVariants((current) =>
+      current.map((variant, variantIndex) =>
+        variantIndex === index
+          ? { ...variant, hex: value }
+          : variant
+      )
+    );
+  }
+
+  function updateVariantImage(
+    variantIndex: number,
+    imageIndex: number,
+    value: string
+  ) {
+    setVariants((current) =>
+      current.map(
+        (variant, currentVariantIndex) => {
+          if (
+            currentVariantIndex !== variantIndex
+          ) {
+            return variant;
+          }
+
+          return {
+            ...variant,
+            images: variant.images.map(
+              (image, currentImageIndex) =>
+                currentImageIndex === imageIndex
+                  ? value
+                  : image
+            ),
+          };
+        }
+      )
+    );
+
+    setSelectedPreviewVariant(variantIndex);
+    setSelectedPreviewImage(0);
+  }
+
+  function updateVariantStock(
+    variantIndex: number,
+    size: Size,
+    value: string
+  ) {
+    const stockValue = Math.max(
+      0,
+      Number(value) || 0
+    );
+
+    setVariants((current) =>
+      current.map(
+        (variant, currentVariantIndex) =>
+          currentVariantIndex === variantIndex
+            ? {
+                ...variant,
+                stock: {
+                  ...variant.stock,
+                  [size]: stockValue,
+                },
+              }
+            : variant
+      )
+    );
+  }
+
+  function updateFeature(
+    index: number,
+    value: string
+  ) {
     setFeatures((current) =>
       current.map((feature, featureIndex) =>
         featureIndex === index ? value : feature
@@ -328,7 +524,10 @@ ${imagesCode}
     field: keyof TshirtMeasurement,
     value: string
   ) {
-    const numberValue = Math.max(0, Number(value) || 0);
+    const numberValue = Math.max(
+      0,
+      Number(value) || 0
+    );
 
     setTshirtSizeGuide((current) => ({
       ...current,
@@ -344,7 +543,10 @@ ${imagesCode}
     field: keyof PantsMeasurement,
     value: string
   ) {
-    const numberValue = Math.max(0, Number(value) || 0);
+    const numberValue = Math.max(
+      0,
+      Number(value) || 0
+    );
 
     setPantsSizeGuide((current) => ({
       ...current,
@@ -357,7 +559,10 @@ ${imagesCode}
 
   async function copyCode() {
     try {
-      await navigator.clipboard.writeText(generatedCode);
+      await navigator.clipboard.writeText(
+        generatedCode
+      );
+
       setCopied(true);
 
       window.setTimeout(() => {
@@ -374,10 +579,14 @@ ${imagesCode}
     setShortName("");
     setPrice("3650");
     setDescription("");
-    setImages(["", "", "", ""]);
-    setSelectedPreviewImage(0);
-    setStock({ ...initialStock });
     setFeatures([...tshirtFeatures]);
+
+    setVariants([
+      createEmptyVariant("Black", "#000000"),
+    ]);
+
+    setSelectedPreviewVariant(0);
+    setSelectedPreviewImage(0);
 
     setTshirtSizeGuide({
       XS: { ...initialTshirtSizeGuide.XS },
@@ -429,6 +638,7 @@ ${imagesCode}
 
         <div className="mt-10 grid gap-8 lg:grid-cols-2">
           <div className="space-y-8">
+            {/* Product Details */}
             <div className="bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-black">
                 PRODUCT DETAILS
@@ -444,7 +654,8 @@ ${imagesCode}
                     value={productType}
                     onChange={(event) =>
                       changeProductType(
-                        event.target.value as ProductType
+                        event.target
+                          .value as ProductType
                       )
                     }
                     className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
@@ -469,7 +680,7 @@ ${imagesCode}
                     onChange={(event) =>
                       setName(event.target.value)
                     }
-                    placeholder="Example: Black Oversized Tee"
+                    placeholder="Example: Darky Essential Tee"
                     className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                   />
                 </div>
@@ -484,7 +695,7 @@ ${imagesCode}
                     onChange={(event) =>
                       setShortName(event.target.value)
                     }
-                    placeholder="Example: Black Tee"
+                    placeholder="Example: Essential Tee"
                     className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                   />
                 </div>
@@ -513,7 +724,9 @@ ${imagesCode}
                   <textarea
                     value={description}
                     onChange={(event) =>
-                      setDescription(event.target.value)
+                      setDescription(
+                        event.target.value
+                      )
                     }
                     rows={5}
                     placeholder="Product description එක ලියන්න"
@@ -523,93 +736,251 @@ ${imagesCode}
               </div>
             </div>
 
-            <div className="bg-white p-6 shadow-sm md:p-8">
-              <h2 className="text-2xl font-black">
-                PRODUCT PHOTOS
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-gray-500">
-                Photos `public/images` folder එකට දාලා file
-                names මෙතන දාන්න. පළමු photo එක homepage සහ
-                cart එකේ main photo එක වෙනවා.
-              </p>
-
-              <div className="mt-6 space-y-5">
-                {images.map((image, index) => (
-                  <div key={index}>
-                    <label className="mb-2 block text-sm font-bold">
-                      PHOTO {index + 1}
-                      {index === 0 ? " — MAIN PHOTO" : ""}
-                    </label>
-
-                    <input
-                      value={image}
-                      onChange={(event) =>
-                        updateImage(index, event.target.value)
-                      }
-                      placeholder={`Example: product-${
-                        index + 1
-                      }.jpg`}
-                      className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
+            {/* Product Features */}
             <div className="bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-black">
                 PRODUCT FEATURES
               </h2>
 
               <div className="mt-6 space-y-4">
-                {features.map((feature, index) => (
-                  <div key={index}>
-                    <label className="mb-2 block text-sm font-bold">
-                      FEATURE {index + 1}
-                    </label>
+                {features.map(
+                  (feature, index) => (
+                    <div key={index}>
+                      <label className="mb-2 block text-sm font-bold">
+                        FEATURE {index + 1}
+                      </label>
 
-                    <input
-                      value={feature}
-                      onChange={(event) =>
-                        updateFeature(
-                          index,
-                          event.target.value
-                        )
-                      }
-                      className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                    />
-                  </div>
-                ))}
+                      <input
+                        value={feature}
+                        onChange={(event) =>
+                          updateFeature(
+                            index,
+                            event.target.value
+                          )
+                        }
+                        className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                      />
+                    </div>
+                  )
+                )}
               </div>
             </div>
 
+            {/* Colour Variants */}
             <div className="bg-white p-6 shadow-sm md:p-8">
-              <h2 className="text-2xl font-black">
-                STOCK BY SIZE
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-black">
+                    COLOUR VARIANTS
+                  </h2>
 
-              <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {sizes.map((size) => (
-                  <div key={size}>
-                    <label className="mb-2 block text-sm font-bold">
-                      {size}
-                    </label>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Colours ඕනෑම ප්‍රමාණයක් add
+                    කරන්න පුළුවන්.
+                  </p>
+                </div>
 
-                    <input
-                      type="number"
-                      min="0"
-                      value={stock[size]}
-                      onChange={(event) =>
-                        updateStock(size, event.target.value)
-                      }
-                      className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                    />
-                  </div>
-                ))}
+                <button
+                  type="button"
+                  onClick={addNewColour}
+                  className="bg-black px-5 py-3 text-sm font-black text-white transition hover:bg-gray-800"
+                >
+                  + ADD NEW COLOUR
+                </button>
               </div>
+
+              <p className="mt-5 text-sm font-bold">
+                TOTAL COLOURS: {variants.length}
+              </p>
+
+              <div className="mt-7 space-y-8">
+                {variants.map(
+                  (variant, variantIndex) => (
+                    <div
+                      key={variantIndex}
+                      className="border border-gray-300 p-5"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="h-9 w-9 rounded-full border border-gray-300"
+                            style={{
+                              backgroundColor:
+                                variant.hex,
+                            }}
+                          />
+
+                          <h3 className="text-xl font-black">
+                            COLOUR{" "}
+                            {variantIndex + 1}
+                          </h3>
+                        </div>
+
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedPreviewVariant(
+                                variantIndex
+                              );
+                              setSelectedPreviewImage(
+                                0
+                              );
+                            }}
+                            className="border border-black px-4 py-2 text-sm font-bold transition hover:bg-black hover:text-white"
+                          >
+                            PREVIEW
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeColour(
+                                variantIndex
+                              )
+                            }
+                            className="border border-red-600 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-600 hover:text-white"
+                          >
+                            REMOVE COLOUR
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block text-sm font-bold">
+                            COLOUR NAME
+                          </label>
+
+                          <input
+                            value={variant.name}
+                            onChange={(event) =>
+                              updateVariantName(
+                                variantIndex,
+                                event.target.value
+                              )
+                            }
+                            placeholder="Example: Black"
+                            className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-bold">
+                            HEX COLOUR
+                          </label>
+
+                          <div className="flex gap-3">
+                            <input
+                              type="color"
+                              value={variant.hex}
+                              onChange={(event) =>
+                                updateVariantHex(
+                                  variantIndex,
+                                  event.target.value
+                                )
+                              }
+                              className="h-12 w-16 border border-gray-300"
+                            />
+
+                            <input
+                              value={variant.hex}
+                              onChange={(event) =>
+                                updateVariantHex(
+                                  variantIndex,
+                                  event.target.value
+                                )
+                              }
+                              placeholder="#000000"
+                              className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <h4 className="mt-7 font-black">
+                        PHOTOS
+                      </h4>
+
+                      <p className="mt-2 text-sm text-gray-500">
+                        Photo files `public/images`
+                        folder එකට දාලා file name එක
+                        මෙතන දාන්න.
+                      </p>
+
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        {variant.images.map(
+                          (image, imageIndex) => (
+                            <div key={imageIndex}>
+                              <label className="mb-2 block text-sm font-bold">
+                                PHOTO{" "}
+                                {imageIndex + 1}
+                              </label>
+
+                              <input
+                                value={image}
+                                onChange={(event) =>
+                                  updateVariantImage(
+                                    variantIndex,
+                                    imageIndex,
+                                    event.target
+                                      .value
+                                  )
+                                }
+                                placeholder={`Example: product-colour-${
+                                  imageIndex + 1
+                                }.jpg`}
+                                className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                              />
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      <h4 className="mt-7 font-black">
+                        STOCK BY SIZE
+                      </h4>
+
+                      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                        {sizes.map((size) => (
+                          <div key={size}>
+                            <label className="mb-2 block text-sm font-bold">
+                              {size}
+                            </label>
+
+                            <input
+                              type="number"
+                              min="0"
+                              value={
+                                variant.stock[size]
+                              }
+                              onChange={(event) =>
+                                updateVariantStock(
+                                  variantIndex,
+                                  size,
+                                  event.target.value
+                                )
+                              }
+                              className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={addNewColour}
+                className="mt-8 w-full border-2 border-dashed border-black px-6 py-4 font-black transition hover:bg-black hover:text-white"
+              >
+                + ADD ANOTHER COLOUR
+              </button>
             </div>
 
+            {/* Size Guide */}
             <div className="bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-black">
                 {productType === "tshirt"
@@ -631,7 +1002,8 @@ ${imagesCode}
                       SIZE {size}
                     </h3>
 
-                    {productType === "tshirt" ? (
+                    {productType ===
+                    "tshirt" ? (
                       <div className="mt-4 grid gap-4 sm:grid-cols-3">
                         {(
                           [
@@ -650,13 +1022,18 @@ ${imagesCode}
                               min="0"
                               step="0.1"
                               value={
-                                tshirtSizeGuide[size][field]
+                                tshirtSizeGuide[
+                                  size
+                                ][field]
                               }
-                              onChange={(event) =>
+                              onChange={(
+                                event
+                              ) =>
                                 updateTshirtMeasurement(
                                   size,
                                   field,
-                                  event.target.value
+                                  event.target
+                                    .value
                                 )
                               }
                               className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
@@ -684,13 +1061,18 @@ ${imagesCode}
                               min="0"
                               step="0.1"
                               value={
-                                pantsSizeGuide[size][field]
+                                pantsSizeGuide[
+                                  size
+                                ][field]
                               }
-                              onChange={(event) =>
+                              onChange={(
+                                event
+                              ) =>
                                 updatePantsMeasurement(
                                   size,
                                   field,
-                                  event.target.value
+                                  event.target
+                                    .value
                                 )
                               }
                               className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
@@ -713,6 +1095,7 @@ ${imagesCode}
             </button>
           </div>
 
+          {/* Preview and Generated Code */}
           <div className="space-y-8">
             <div className="bg-white p-6 shadow-sm md:p-8">
               <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
@@ -722,33 +1105,43 @@ ${imagesCode}
               <div className="mt-6 overflow-hidden bg-gray-100">
                 <img
                   src={previewImage}
-                  alt={name || "Product preview"}
+                  alt={
+                    name || "Product preview"
+                  }
                   className="aspect-square w-full object-cover"
                 />
               </div>
 
-              {availableImages.length > 1 && (
+              {currentPreviewImages.length >
+                1 && (
                 <div className="mt-4 grid grid-cols-4 gap-3">
-                  {availableImages.map((image, index) => (
-                    <button
-                      key={`${image}-${index}`}
-                      type="button"
-                      onClick={() =>
-                        setSelectedPreviewImage(index)
-                      }
-                      className={`overflow-hidden border-2 bg-gray-100 ${
-                        selectedPreviewImage === index
-                          ? "border-black"
-                          : "border-transparent"
-                      }`}
-                    >
-                      <img
-                        src={image}
-                        alt={`Preview ${index + 1}`}
-                        className="aspect-square w-full object-cover"
-                      />
-                    </button>
-                  ))}
+                  {currentPreviewImages.map(
+                    (image, imageIndex) => (
+                      <button
+                        key={`${image}-${imageIndex}`}
+                        type="button"
+                        onClick={() =>
+                          setSelectedPreviewImage(
+                            imageIndex
+                          )
+                        }
+                        className={`overflow-hidden border-2 ${
+                          selectedPreviewImage ===
+                          imageIndex
+                            ? "border-black"
+                            : "border-transparent"
+                        }`}
+                      >
+                        <img
+                          src={image}
+                          alt={`Preview ${
+                            imageIndex + 1
+                          }`}
+                          className="aspect-square w-full object-cover"
+                        />
+                      </button>
+                    )
+                  )}
                 </div>
               )}
 
@@ -763,28 +1156,104 @@ ${imagesCode}
               </h2>
 
               <p className="mt-2 text-xl font-bold">
-                Rs. {(Number(price) || 0).toLocaleString()}
+                Rs.{" "}
+                {(
+                  Number(price) || 0
+                ).toLocaleString()}
               </p>
 
-              <p className="mt-4 leading-7 text-gray-600">
+              <p className="mt-5 text-sm text-gray-500">
+                Selected colour
+              </p>
+
+              <div className="mt-2 flex items-center gap-3">
+                <span
+                  className="h-8 w-8 rounded-full border border-gray-300"
+                  style={{
+                    backgroundColor:
+                      currentPreviewVariant.hex,
+                  }}
+                />
+
+                <span className="font-black">
+                  {currentPreviewVariant.name ||
+                    `Colour ${
+                      selectedPreviewVariant + 1
+                    }`}
+                </span>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                {variants.map(
+                  (variant, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPreviewVariant(
+                          index
+                        );
+                        setSelectedPreviewImage(
+                          0
+                        );
+                      }}
+                      className={`h-10 w-10 rounded-full border-2 p-1 ${
+                        selectedPreviewVariant ===
+                        index
+                          ? "border-black"
+                          : "border-gray-300"
+                      }`}
+                      aria-label={
+                        variant.name ||
+                        `Colour ${index + 1}`
+                      }
+                    >
+                      <span
+                        className="block h-full w-full rounded-full border border-gray-300"
+                        style={{
+                          backgroundColor:
+                            variant.hex,
+                        }}
+                      />
+                    </button>
+                  )
+                )}
+              </div>
+
+              <p className="mt-5 leading-7 text-gray-600">
                 {description ||
                   "Product description එක මෙතන පේනවා."}
               </p>
 
               <div className="mt-6 space-y-2 border-t pt-5 text-sm text-gray-600">
-                {features.map((feature, index) => (
-                  <p key={index}>
-                    ✓ {feature || `Feature ${index + 1}`}
-                  </p>
-                ))}
+                {features.map(
+                  (feature, index) => (
+                    <p key={index}>
+                      ✓{" "}
+                      {feature ||
+                        `Feature ${
+                          index + 1
+                        }`}
+                    </p>
+                  )
+                )}
               </div>
+
+              <p className="mt-6 text-sm text-gray-500">
+                Total colours
+              </p>
+
+              <p className="mt-1 font-black">
+                {variants.length}
+              </p>
 
               <p className="mt-6 text-sm text-gray-500">
                 Product link
               </p>
 
               <p className="mt-1 break-all font-bold">
-                /product/{slug || "product-slug"}
+                /product/
+                {slug || "product-slug"}
               </p>
             </div>
 
@@ -799,11 +1268,13 @@ ${imagesCode}
                   onClick={copyCode}
                   className="bg-white px-5 py-3 font-black text-black hover:bg-gray-200"
                 >
-                  {copied ? "COPIED ✓" : "COPY CODE"}
+                  {copied
+                    ? "COPIED ✓"
+                    : "COPY CODE"}
                 </button>
               </div>
 
-              <pre className="mt-6 max-h-[900px] overflow-auto whitespace-pre-wrap border border-white/20 bg-gray-950 p-5 text-sm leading-7 text-gray-200">
+              <pre className="mt-6 max-h-[1000px] overflow-auto whitespace-pre-wrap border border-white/20 bg-gray-950 p-5 text-sm leading-7 text-gray-200">
                 <code>{generatedCode}</code>
               </pre>
             </div>
