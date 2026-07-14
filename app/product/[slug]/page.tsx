@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { FaWhatsapp } from "react-icons/fa";
 
@@ -39,6 +39,15 @@ export default function DynamicProductPage() {
 
   const [quantity, setQuantity] = useState(1);
 
+  const [selectedImageIndex, setSelectedImageIndex] =
+    useState(0);
+
+  useEffect(() => {
+    setSelectedImageIndex(0);
+    setSelectedSize("M");
+    setQuantity(1);
+  }, [slug]);
+
   if (!foundProduct) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-black">
@@ -64,11 +73,40 @@ export default function DynamicProductPage() {
 
   const product = foundProduct;
 
+  const galleryImages =
+    product.images && product.images.length > 0
+      ? product.images
+      : [product.image];
+
+  const safeImageIndex =
+    selectedImageIndex < galleryImages.length
+      ? selectedImageIndex
+      : 0;
+
+  const selectedImage = galleryImages[safeImageIndex];
+
   const selectedStock =
     product.stock[selectedSize] ?? 0;
 
   const isOutOfStock = selectedStock === 0;
+
   const total = product.price * quantity;
+
+  function showPreviousImage() {
+    setSelectedImageIndex((currentIndex) =>
+      currentIndex === 0
+        ? galleryImages.length - 1
+        : currentIndex - 1
+    );
+  }
+
+  function showNextImage() {
+    setSelectedImageIndex((currentIndex) =>
+      currentIndex === galleryImages.length - 1
+        ? 0
+        : currentIndex + 1
+    );
+  }
 
   function addToCart() {
     if (isOutOfStock) return;
@@ -170,14 +208,77 @@ export default function DynamicProductPage() {
       </nav>
 
       {/* Product Section */}
-      <section className="mx-auto grid max-w-7xl gap-12 px-6 py-12 md:grid-cols-2 md:px-12">
-        {/* Product Image */}
-        <div className="overflow-hidden bg-gray-100">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="aspect-square w-full object-cover"
-          />
+      <section className="mx-auto grid max-w-7xl gap-12 px-5 py-10 sm:px-6 md:grid-cols-2 md:px-12 md:py-12">
+        {/* Product Gallery */}
+        <div>
+          {/* Main Image */}
+          <div className="relative overflow-hidden bg-gray-100">
+            <img
+              src={selectedImage}
+              alt={`${product.name} photo ${
+                safeImageIndex + 1
+              }`}
+              className="aspect-square w-full object-cover"
+            />
+
+            {galleryImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={showPreviousImage}
+                  aria-label="Previous product image"
+                  className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center bg-white/90 text-2xl font-bold shadow-md transition hover:bg-black hover:text-white"
+                >
+                  ‹
+                </button>
+
+                <button
+                  type="button"
+                  onClick={showNextImage}
+                  aria-label="Next product image"
+                  className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center bg-white/90 text-2xl font-bold shadow-md transition hover:bg-black hover:text-white"
+                >
+                  ›
+                </button>
+
+                <div className="absolute bottom-3 right-3 bg-black/75 px-3 py-2 text-xs font-bold text-white">
+                  {safeImageIndex + 1} /{" "}
+                  {galleryImages.length}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Thumbnail Images */}
+          {galleryImages.length > 1 && (
+            <div className="mt-4 grid grid-cols-4 gap-3">
+              {galleryImages.map((image, index) => (
+                <button
+                  key={`${image}-${index}`}
+                  type="button"
+                  onClick={() =>
+                    setSelectedImageIndex(index)
+                  }
+                  className={`overflow-hidden border-2 bg-gray-100 transition ${
+                    safeImageIndex === index
+                      ? "border-black"
+                      : "border-transparent hover:border-gray-400"
+                  }`}
+                  aria-label={`Show product image ${
+                    index + 1
+                  }`}
+                >
+                  <img
+                    src={image}
+                    alt={`${product.name} thumbnail ${
+                      index + 1
+                    }`}
+                    className="aspect-square w-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Product Details */}
@@ -294,8 +395,12 @@ export default function DynamicProductPage() {
                     )
                   )
                 }
-                disabled={quantity >= selectedStock}
+                disabled={
+                  isOutOfStock ||
+                  quantity >= selectedStock
+                }
                 className={`h-12 w-12 text-xl ${
+                  isOutOfStock ||
                   quantity >= selectedStock
                     ? "cursor-not-allowed text-gray-300"
                     : "hover:bg-gray-100"
