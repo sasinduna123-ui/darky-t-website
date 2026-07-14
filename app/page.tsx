@@ -71,11 +71,11 @@ export default function Home() {
 />
 
         <h4 className="mt-5 text-lg font-bold">
-          Arthur Morgan-RDR 2
+          Arthur Morgan01-RDR 2
         </h4>
 
         <p className="mt-1 text-gray-600">
-          Rs. 2,850
+          Rs. 3,650
           <a
   href="https://wa.me/94788809678?text=I%20want%20to%20order%20Essential%20Black%20Tee"
   target="_blank"
@@ -94,11 +94,11 @@ export default function Home() {
 />
 
         <h4 className="mt-5 text-lg font-bold">
-          Arthur Morgan-RDR 2
+          Arthur Morgan02-RDR 2
         </h4>
 
         <p className="mt-1 text-gray-600">
-          Rs. 2,850
+          Rs. 3,650
           <a
   href="https://wa.me/94788809678?text=I%20want%20to%20order%20Heavy%20Cotton%20White%20Tee"
   target="_blank"
@@ -121,7 +121,7 @@ src="/images/TSHIRT3.jpg"
         </h4>
 
         <p className="mt-1 text-gray-600">
-          Rs. 2,850
+          Rs. 3,650
           <a
   href="https://wa.me/94788809678?text=I%20want%20to%20order%20Dark%20Grey%20Oversized%20Tee"
   target="_blank"
@@ -161,14 +161,14 @@ src="/images/TSHIRT3.jpg"
 
       <div className="grid grid-cols-2 gap-4">
         <div className="border border-white/20 p-5">
-          <h4 className="text-xl font-bold">240 GSM</h4>
+          <h4 className="text-xl font-bold">180/240/260/350 GSM</h4>
           <p className="mt-2 text-sm text-gray-400">
             Heavy cotton fabric
           </p>
         </div>
 
         <div className="border border-white/20 p-5">
-          <h4 className="text-xl font-bold">OVERSIZED</h4>
+          <h4 className="text-xl font-bold">OVERSIZED OR REGULAR SIZE</h4>
           <p className="mt-2 text-sm text-gray-400">
             Premium relaxed fit
           </p>
@@ -220,17 +220,32 @@ src="/images/TSHIRT3.jpg"
     </a>
 
     <div className="mt-10 flex flex-wrap justify-center gap-8 font-semibold">
-      <a href="#" className="hover:text-gray-500">
-        INSTAGRAM
-      </a>
+      <a
+  href="https://www.instagram.com/YOUR_USERNAME"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="hover:text-gray-500"
+>
+  INSTAGRAM
+</a>
 
-      <a href="#" className="hover:text-gray-500">
-        FACEBOOK
-      </a>
+<a
+  href="https://www.facebook.com/YOUR_PAGE"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="hover:text-gray-500"
+>
+  FACEBOOK
+</a>
 
-      <a href="#" className="hover:text-gray-500">
-        TIKTOK
-      </a>
+<a
+  href="https://www.tiktok.com/@sasindu_nathee?_r=1&_t=ZS-981NZk7vYkz"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="hover:text-gray-500"
+>
+  TIKTOK
+</a>
     </div>
   </div>
 </section>
