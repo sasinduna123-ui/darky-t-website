@@ -7,8 +7,20 @@ export default function GreyProductPage() {
   const [quantity, setQuantity] = useState(1);
 
   const price = 3650;
-  const total = price * quantity;
   const whatsappNumber = "94788809678";
+
+  const stockBySize: Record<string, number> = {
+    XS: 2,
+    S: 4,
+    M: 6,
+    L: 5,
+    XL: 2,
+    XXL: 1,
+  };
+
+  const selectedStock = stockBySize[selectedSize];
+  const isOutOfStock = selectedStock === 0;
+  const total = price * quantity;
 
   const orderMessage = encodeURIComponent(
     `Hello DARKY T,
@@ -62,20 +74,41 @@ Total: Rs. ${total.toLocaleString()}`
             <p className="mb-3 font-bold">SELECT SIZE</p>
 
             <div className="flex flex-wrap gap-3">
-              {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={`h-12 min-w-12 border px-3 font-bold transition ${
-                    selectedSize === size
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 hover:border-black"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+              {["XS", "S", "M", "L", "XL", "XXL"].map((size) => {
+                const stock = stockBySize[size];
+                const soldOut = stock === 0;
+
+                return (
+                  <button
+                    key={size}
+                    disabled={soldOut}
+                    onClick={() => {
+                      setSelectedSize(size);
+                      setQuantity(1);
+                    }}
+                    className={`min-w-14 border px-3 py-3 font-bold transition ${
+                      soldOut
+                        ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through"
+                        : selectedSize === size
+                          ? "border-black bg-black text-white"
+                          : "border-gray-300 hover:border-black"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
             </div>
+
+            <p
+              className={`mt-3 text-sm font-semibold ${
+                isOutOfStock ? "text-red-600" : "text-green-600"
+              }`}
+            >
+              {isOutOfStock
+                ? "OUT OF STOCK"
+                : `Only ${selectedStock} left in stock`}
+            </p>
           </div>
 
           <div className="mt-8">
@@ -96,8 +129,17 @@ Total: Rs. ${total.toLocaleString()}`
               </span>
 
               <button
-                onClick={() => setQuantity((current) => current + 1)}
-                className="h-12 w-12 text-xl hover:bg-gray-100"
+                onClick={() =>
+                  setQuantity((current) =>
+                    Math.min(selectedStock, current + 1)
+                  )
+                }
+                disabled={quantity >= selectedStock}
+                className={`h-12 w-12 text-xl ${
+                  quantity >= selectedStock
+                    ? "cursor-not-allowed text-gray-300"
+                    : "hover:bg-gray-100"
+                }`}
               >
                 +
               </button>
@@ -116,9 +158,13 @@ Total: Rs. ${total.toLocaleString()}`
             href={`https://wa.me/${whatsappNumber}?text=${orderMessage}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-8 bg-black px-8 py-4 text-center font-bold text-white transition hover:bg-gray-800"
+            className={`mt-8 px-8 py-4 text-center font-bold text-white transition ${
+              isOutOfStock
+                ? "pointer-events-none bg-gray-400"
+                : "bg-black hover:bg-gray-800"
+            }`}
           >
-            ORDER ON WHATSAPP
+            {isOutOfStock ? "OUT OF STOCK" : "ORDER ON WHATSAPP"}
           </a>
 
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
