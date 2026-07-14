@@ -1,8 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import type { ProductSizeGuide } from "@/app/data/products";
 
-export default function SizeGuide() {
+type SizeGuideProps = {
+  sizeGuide: ProductSizeGuide;
+};
+
+const sizes = [
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+] as const;
+
+export default function SizeGuide({
+  sizeGuide,
+}: SizeGuideProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -63,47 +79,32 @@ export default function SizeGuide() {
                 </thead>
 
                 <tbody>
-                  <tr>
-                    <td className="border px-4 py-3 font-bold">XS</td>
-                    <td className="border px-4 py-3">38</td>
-                    <td className="border px-4 py-3">26</td>
-                    <td className="border px-4 py-3">8</td>
-                  </tr>
+                  {sizes.map((size, index) => (
+                    <tr
+                      key={size}
+                      className={
+                        index % 2 === 1
+                          ? "bg-gray-50"
+                          : "bg-white"
+                      }
+                    >
+                      <td className="border px-4 py-3 font-bold">
+                        {size}
+                      </td>
 
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-bold">S</td>
-                    <td className="border px-4 py-3">40</td>
-                    <td className="border px-4 py-3">27</td>
-                    <td className="border px-4 py-3">8.5</td>
-                  </tr>
+                      <td className="border px-4 py-3">
+                        {sizeGuide[size].chest}
+                      </td>
 
-                  <tr>
-                    <td className="border px-4 py-3 font-bold">M</td>
-                    <td className="border px-4 py-3">42</td>
-                    <td className="border px-4 py-3">28</td>
-                    <td className="border px-4 py-3">9</td>
-                  </tr>
+                      <td className="border px-4 py-3">
+                        {sizeGuide[size].length}
+                      </td>
 
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-bold">L</td>
-                    <td className="border px-4 py-3">44</td>
-                    <td className="border px-4 py-3">29</td>
-                    <td className="border px-4 py-3">9.5</td>
-                  </tr>
-
-                  <tr>
-                    <td className="border px-4 py-3 font-bold">XL</td>
-                    <td className="border px-4 py-3">46</td>
-                    <td className="border px-4 py-3">30</td>
-                    <td className="border px-4 py-3">10</td>
-                  </tr>
-
-                  <tr className="bg-gray-50">
-                    <td className="border px-4 py-3 font-bold">XXL</td>
-                    <td className="border px-4 py-3">48</td>
-                    <td className="border px-4 py-3">31</td>
-                    <td className="border px-4 py-3">10.5</td>
-                  </tr>
+                      <td className="border px-4 py-3">
+                        {sizeGuide[size].sleeve}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -114,10 +115,9 @@ export default function SizeGuide() {
               </h3>
 
               <p className="mt-2 leading-7 text-gray-600">
-                ඔබට හොඳින් ගැළපෙන T-shirt එකක් පැතලි මතුපිටක තබා,
-                chest සහ length මැනලා මේ table එක සමඟ සසඳන්න.
-                Oversized fit එකක් අවශ්‍ය නම් සාමාන්‍ය size එකට වඩා
-                size එකක් වැඩියෙන් තෝරාගන්න.
+                ඔබට හොඳින් ගැළපෙන T-shirt එකක් පැතලි මතුපිටක
+                තබා chest, length සහ sleeve measurements මැනලා
+                මේ table එක සමඟ සසඳන්න.
               </p>
             </div>
 
