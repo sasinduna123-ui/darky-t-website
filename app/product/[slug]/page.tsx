@@ -26,9 +26,7 @@ export default function DynamicProductPage() {
 
   const foundProduct = getProductBySlug(slug);
 
-  const [selectedSize, setSelectedSize] =
-    useState<Size>("M");
-
+  const [selectedSize, setSelectedSize] = useState<Size>("M");
   const [quantity, setQuantity] = useState(1);
 
   if (!foundProduct) {
@@ -73,8 +71,7 @@ export default function DynamicProductPage() {
     };
 
     try {
-      const savedCart =
-        localStorage.getItem("darky-cart");
+      const savedCart = localStorage.getItem("darky-cart");
 
       const cart: CartItem[] = savedCart
         ? JSON.parse(savedCart)
@@ -130,9 +127,7 @@ export default function DynamicProductPage() {
 
       window.location.href = "/direct-order";
     } catch {
-      alert(
-        "Could not continue to delivery details."
-      );
+      alert("Could not continue to delivery details.");
     }
   }
 
@@ -195,7 +190,7 @@ export default function DynamicProductPage() {
                 SELECT SIZE
               </p>
 
-              <SizeGuide />
+              <SizeGuide sizeGuide={product.sizeGuide} />
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -335,10 +330,11 @@ export default function DynamicProductPage() {
 
           {/* Product Features */}
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
-            <p>✓ 240 GSM heavy cotton</p>
-            <p>✓ Premium oversized fit</p>
-            <p>✓ High-quality print and finishing</p>
-            <p>✓ Islandwide delivery</p>
+            {product.features.map((feature, index) => (
+              <p key={`${feature}-${index}`}>
+                ✓ {feature}
+              </p>
+            ))}
           </div>
         </div>
       </section>
