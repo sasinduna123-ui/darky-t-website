@@ -1,5 +1,52 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type CartItem = {
+  id: string;
+  name: string;
+  image: string;
+  size: string;
+  price: number;
+  quantity: number;
+};
+
 export default function Home() {
-  const whatsappNumber = "94788809678";
+  const [cartCount, setCartCount] = useState(0);
+
+  function updateCartCount() {
+    try {
+      const savedCart = localStorage.getItem("darky-cart");
+
+      if (!savedCart) {
+        setCartCount(0);
+        return;
+      }
+
+      const cart: CartItem[] = JSON.parse(savedCart);
+
+      const totalItems = cart.reduce(
+        (total, item) => total + item.quantity,
+        0
+      );
+
+      setCartCount(totalItems);
+    } catch {
+      setCartCount(0);
+    }
+  }
+
+  useEffect(() => {
+    updateCartCount();
+
+    window.addEventListener("focus", updateCartCount);
+    window.addEventListener("storage", updateCartCount);
+
+    return () => {
+      window.removeEventListener("focus", updateCartCount);
+      window.removeEventListener("storage", updateCartCount);
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -78,7 +125,7 @@ export default function Home() {
               href="/cart"
               className="whitespace-nowrap rounded-full border-2 border-white px-7 py-4 text-sm font-black text-white transition hover:bg-white hover:text-black sm:px-8 sm:text-base"
             >
-              VIEW CART
+              VIEW CART ({cartCount})
             </a>
           </div>
         </div>
@@ -119,23 +166,12 @@ export default function Home() {
                 Rs. 3,650
               </p>
 
-              <div className="mt-4 grid gap-3">
-                <a
-                  href="/product"
-                  className="w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
-                >
-                  VIEW PRODUCT
-                </a>
-
-                <a
-                  href={`https://wa.me/${whatsappNumber}?text=I%20want%20to%20order%20Essential%20Black%20Tee`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full border-2 border-black px-5 py-3 text-center font-black transition hover:bg-black hover:text-white"
-                >
-                  ORDER ON WHATSAPP
-                </a>
-              </div>
+              <a
+                href="/product"
+                className="mt-4 block w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
+              >
+                VIEW PRODUCT
+              </a>
             </div>
 
             {/* White Product */}
@@ -158,23 +194,12 @@ export default function Home() {
                 Rs. 3,650
               </p>
 
-              <div className="mt-4 grid gap-3">
-                <a
-                  href="/product/white"
-                  className="w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
-                >
-                  VIEW PRODUCT
-                </a>
-
-                <a
-                  href={`https://wa.me/${whatsappNumber}?text=I%20want%20to%20order%20Heavy%20Cotton%20White%20Tee`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full border-2 border-black px-5 py-3 text-center font-black transition hover:bg-black hover:text-white"
-                >
-                  ORDER ON WHATSAPP
-                </a>
-              </div>
+              <a
+                href="/product/white"
+                className="mt-4 block w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
+              >
+                VIEW PRODUCT
+              </a>
             </div>
 
             {/* Grey Product */}
@@ -197,23 +222,12 @@ export default function Home() {
                 Rs. 3,650
               </p>
 
-              <div className="mt-4 grid gap-3">
-                <a
-                  href="/product/grey"
-                  className="w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
-                >
-                  VIEW PRODUCT
-                </a>
-
-                <a
-                  href={`https://wa.me/${whatsappNumber}?text=I%20want%20to%20order%20Dark%20Grey%20Oversized%20Tee`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full border-2 border-black px-5 py-3 text-center font-black transition hover:bg-black hover:text-white"
-                >
-                  ORDER ON WHATSAPP
-                </a>
-              </div>
+              <a
+                href="/product/grey"
+                className="mt-4 block w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
+              >
+                VIEW PRODUCT
+              </a>
             </div>
           </div>
         </div>
@@ -291,17 +305,15 @@ export default function Home() {
           </h2>
 
           <p className="mx-auto mt-5 max-w-xl leading-7 text-gray-600">
-            Contact DARKY T through WhatsApp or TikTok for orders and more
-            information.
+            Select a product, choose the size and quantity, add it to the cart,
+            and complete the order through WhatsApp checkout.
           </p>
 
           <a
-            href={`https://wa.me/${whatsappNumber}`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#shop"
             className="mt-8 inline-block whitespace-nowrap rounded-full bg-black px-8 py-4 font-black text-white transition hover:scale-105 hover:bg-gray-800"
           >
-            CHAT ON WHATSAPP
+            SHOP COLLECTION
           </a>
 
           <div className="mt-10">
