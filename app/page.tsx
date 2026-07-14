@@ -65,7 +65,7 @@ export default function Home() {
 
       <div>
         <img
-  src="/images/tshirt1.jpg"
+  src="/images/TSHIRT1.jpg"
   alt="Essential Black Tee"
   className="aspect-square w-full object-cover"
 />
@@ -88,7 +88,7 @@ export default function Home() {
 
       <div>
         <img
-  src="/images/tshirt2.jpg"
+  src="/images/TSHIRT2.jpg"
   alt="Heavy Cotton White Tee"
   className="aspect-square w-full object-cover"
 />
@@ -111,7 +111,7 @@ export default function Home() {
 
       <div>
         <img
-  src="/images/tshirt3.jpg"
+src="/images/TSHIRT3.jpg"
   alt="Dark Grey Oversized Tee"
   className="aspect-square w-full object-cover"
 />
@@ -251,6 +251,7 @@ export default function Home() {
     </main>
 
   );
+
 }
 
 // DARKY T website
