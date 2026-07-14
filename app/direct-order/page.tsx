@@ -1,333 +1,479 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
+import { FaWhatsapp } from "react-icons/fa";
 
-type DirectOrder = {
+type DirectOrderItem = {
   id: string;
   name: string;
   image: string;
+  color?: string;
+  colorSlug?: string;
   size: string;
   price: number;
   quantity: number;
 };
 
-export default function DirectOrderPage() {
-  const [order, setOrder] = useState<DirectOrder | null>(null);
-  const [customerName, setCustomerName] = useState("");
-  const [primaryPhone, setPrimaryPhone] = useState("");
-  const [alternativePhone, setAlternativePhone] = useState("");
-  const [district, setDistrict] = useState("");
-  const [address, setAddress] = useState("");
+const districts = [
+  "Ampara",
+  "Anuradhapura",
+  "Badulla",
+  "Batticaloa",
+  "Colombo",
+  "Galle",
+  "Gampaha",
+  "Hambantota",
+  "Jaffna",
+  "Kalutara",
+  "Kandy",
+  "Kegalle",
+  "Kilinochchi",
+  "Kurunegala",
+  "Mannar",
+  "Matale",
+  "Matara",
+  "Monaragala",
+  "Mullaitivu",
+  "Nuwara Eliya",
+  "Polonnaruwa",
+  "Puttalam",
+  "Ratnapura",
+  "Trincomalee",
+  "Vavuniya",
+];
 
-  const whatsappNumber = "94788809678";
+export default function DirectOrderPage() {
+  const [orderItem, setOrderItem] =
+    useState<DirectOrderItem | null>(null);
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [customerName, setCustomerName] =
+    useState("");
+
+  const [primaryPhone, setPrimaryPhone] =
+    useState("");
+
+  const [alternativePhone, setAlternativePhone] =
+    useState("");
+
+  const [district, setDistrict] =
+    useState("");
+
+  const [address, setAddress] =
+    useState("");
+
+  const [note, setNote] =
+    useState("");
+
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
   useEffect(() => {
     try {
-      const savedOrder = localStorage.getItem("darky-direct-order");
+      const savedOrder =
+        localStorage.getItem(
+          "darky-direct-order"
+        );
 
-      if (savedOrder) {
-        const parsedOrder: DirectOrder = JSON.parse(savedOrder);
-        setOrder(parsedOrder);
+      if (!savedOrder) {
+        setOrderItem(null);
+        return;
       }
+
+      const parsedOrder: DirectOrderItem =
+        JSON.parse(savedOrder);
+
+      setOrderItem(parsedOrder);
     } catch {
-      setOrder(null);
+      setOrderItem(null);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  if (!order) {
+  if (isLoading) {
     return (
-      <main className="min-h-screen bg-gray-100 text-black">
-        <nav className="flex items-center justify-between bg-black px-4 py-5 text-white sm:px-6 md:px-12">
-          <a
-            href="/"
-            className="text-xl font-black tracking-[0.2em] sm:text-2xl"
-          >
-            DARKY T
-          </a>
-
-          <a
-            href="/"
-            className="whitespace-nowrap text-xs font-semibold hover:text-gray-300 sm:text-sm"
-          >
-            BACK TO HOME
-          </a>
-        </nav>
-
-        <section className="mx-auto max-w-3xl px-6 py-16 text-center">
-          <div className="bg-white p-10 shadow-sm">
-            <h1 className="text-3xl font-black">
-              NO PRODUCT SELECTED
-            </h1>
-
-            <p className="mt-4 text-gray-600">
-              Select a product before opening the direct order page.
-            </p>
-
-            <a
-              href="/#shop"
-              className="mt-8 inline-block bg-black px-8 py-4 font-black text-white transition hover:bg-gray-800"
-            >
-              SHOP NOW
-            </a>
-          </div>
-        </section>
+      <main className="flex min-h-screen items-center justify-center bg-white px-6 text-black">
+        <p className="font-bold">
+          Loading order...
+        </p>
       </main>
     );
   }
 
-  const subtotal = order.price * order.quantity;
-  const hasFixedDeliveryFee = order.quantity >= 1 && order.quantity <= 5;
-  const deliveryFee = hasFixedDeliveryFee ? 350 : 0;
-  const finalTotal = subtotal + deliveryFee;
+  if (!orderItem) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-black">
+        <div>
+          <h1 className="text-4xl font-black">
+            ORDER NOT FOUND
+          </h1>
 
-  const formComplete =
-    customerName.trim() !== "" &&
-    primaryPhone.trim() !== "" &&
-    district.trim() !== "" &&
-    address.trim() !== "";
+          <p className="mt-4 text-gray-600">
+            Order කරන්න product එකක් තෝරලා නැහැ.
+          </p>
 
-  const deliveryMessage = hasFixedDeliveryFee
-    ? `Delivery Fee: Rs. ${deliveryFee.toLocaleString()}`
-    : "Delivery Fee: Please confirm through WhatsApp chat";
+          <a
+            href="/#shop"
+            className="mt-8 inline-block bg-black px-8 py-4 font-bold text-white transition hover:bg-gray-800"
+          >
+            BACK TO SHOP
+          </a>
+        </div>
+      </main>
+    );
+  }
 
-  const totalMessage = hasFixedDeliveryFee
-    ? `Final Total: Rs. ${finalTotal.toLocaleString()}`
-    : `Subtotal: Rs. ${subtotal.toLocaleString()}
-Final total will be confirmed after the delivery fee is calculated.`;
+  const currentOrderItem = orderItem;
 
-  const whatsappMessage = encodeURIComponent(
-    `Hello DARKY T,
+  const subtotal =
+    currentOrderItem.price *
+    currentOrderItem.quantity;
 
-I want to place a direct order:
+  const hasFixedDeliveryFee =
+    currentOrderItem.quantity > 0 &&
+    currentOrderItem.quantity <= 5;
 
-CUSTOMER DETAILS
+  const deliveryFee =
+    hasFixedDeliveryFee ? 350 : 0;
 
-Name: ${customerName}
-Primary Phone: ${primaryPhone}
-Alternative Phone: ${
-      alternativePhone.trim() !== ""
-        ? alternativePhone
-        : "Not provided"
+  const finalTotal =
+    subtotal + deliveryFee;
+
+  const selectedColour =
+    currentOrderItem.color?.trim() ||
+    "Not selected";
+
+  function cleanPhoneNumber(
+    value: string
+  ): string {
+    return value.replace(/\D/g, "");
+  }
+
+  function formatSriLankanPhone(
+    value: string
+  ): string {
+    const cleanedNumber =
+      cleanPhoneNumber(value);
+
+    if (cleanedNumber.startsWith("94")) {
+      return `+${cleanedNumber}`;
     }
-District: ${district}
-Address: ${address}
 
-ORDER DETAILS
+    if (cleanedNumber.startsWith("0")) {
+      return `+94${cleanedNumber.slice(1)}`;
+    }
 
-Product: ${order.name}
-Size: ${order.size}
-Quantity: ${order.quantity}
-Unit Price: Rs. ${order.price.toLocaleString()}
-Subtotal: Rs. ${subtotal.toLocaleString()}
+    return `+94${cleanedNumber}`;
+  }
 
+  function isValidPhone(
+    value: string
+  ): boolean {
+    const cleanedNumber =
+      cleanPhoneNumber(value);
+
+    if (
+      cleanedNumber.startsWith("94")
+    ) {
+      return cleanedNumber.length === 11;
+    }
+
+    if (
+      cleanedNumber.startsWith("0")
+    ) {
+      return cleanedNumber.length === 10;
+    }
+
+    return cleanedNumber.length === 9;
+  }
+
+  function validateForm(): boolean {
+    if (!customerName.trim()) {
+      setErrorMessage(
+        "Customer name එක ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!primaryPhone.trim()) {
+      setErrorMessage(
+        "Primary phone number එක ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!isValidPhone(primaryPhone)) {
+      setErrorMessage(
+        "හරි primary phone number එකක් ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!alternativePhone.trim()) {
+      setErrorMessage(
+        "Alternative phone number එකත් අනිවාර්යයෙන් ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!isValidPhone(alternativePhone)) {
+      setErrorMessage(
+        "හරි alternative phone number එකක් ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (
+      cleanPhoneNumber(primaryPhone) ===
+      cleanPhoneNumber(alternativePhone)
+    ) {
+      setErrorMessage(
+        "Phone numbers දෙකට වෙනස් numbers දෙකක් ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    if (!district.trim()) {
+      setErrorMessage(
+        "District එක තෝරන්න."
+      );
+      return false;
+    }
+
+    if (!address.trim()) {
+      setErrorMessage(
+        "Delivery address එක ඇතුළත් කරන්න."
+      );
+      return false;
+    }
+
+    setErrorMessage("");
+    return true;
+  }
+
+  function sendWhatsAppOrder(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const formattedPrimaryPhone =
+      formatSriLankanPhone(primaryPhone);
+
+    const formattedAlternativePhone =
+      formatSriLankanPhone(
+        alternativePhone
+      );
+
+    const deliveryMessage =
+      hasFixedDeliveryFee
+        ? `🚚 Delivery Fee: Rs. ${deliveryFee.toLocaleString()}
+💳 Final Total: Rs. ${finalTotal.toLocaleString()}`
+        : `🚚 Delivery Fee: Please confirm through WhatsApp chat
+💳 Final Total: Will be confirmed after delivery fee is calculated`;
+
+    const whatsappMessage = `🖤 *DARKY T - NEW ORDER* 🖤
+
+Hello DARKY T 👋
+I would like to place an order.
+
+━━━━━━━━━━━━━━━━━━
+🛍️ *ORDER DETAILS*
+━━━━━━━━━━━━━━━━━━
+
+👕 Product: ${currentOrderItem.name}
+🎨 Colour: ${selectedColour}
+📏 Size: ${currentOrderItem.size}
+🔢 Quantity: ${currentOrderItem.quantity}
+💵 Unit Price: Rs. ${currentOrderItem.price.toLocaleString()}
+🧾 Subtotal: Rs. ${subtotal.toLocaleString()}
 ${deliveryMessage}
-${totalMessage}`
-  );
+
+━━━━━━━━━━━━━━━━━━
+👤 *CUSTOMER DETAILS*
+━━━━━━━━━━━━━━━━━━
+
+🙍 Name: ${customerName.trim()}
+📞 Primary Phone: ${formattedPrimaryPhone}
+☎️ Alternative Phone: ${formattedAlternativePhone}
+📍 District: ${district.trim()}
+🏠 Delivery Address: ${address.trim()}
+📝 Note: ${note.trim() || "No special note"}
+
+━━━━━━━━━━━━━━━━━━
+
+✅ Please confirm my order.
+Thank you! 🖤`;
+
+    const whatsappNumber =
+      "94788809678";
+
+    const whatsappUrl =
+      `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+        whatsappMessage
+      )}`;
+
+    window.open(
+      whatsappUrl,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
+  function removeDirectOrder() {
+    localStorage.removeItem(
+      "darky-direct-order"
+    );
+
+    window.location.href =
+      "/#shop";
+  }
 
   return (
     <main className="min-h-screen bg-gray-100 text-black">
       {/* Navbar */}
-      <nav className="flex items-center justify-between bg-black px-4 py-5 text-white sm:px-6 md:px-12">
+      <nav className="flex items-center justify-between bg-black px-5 py-5 text-white md:px-12">
         <a
           href="/"
-          className="text-xl font-black tracking-[0.2em] sm:text-2xl sm:tracking-[0.3em]"
+          className="text-xl font-black tracking-[0.25em] sm:text-2xl"
         >
           DARKY T
         </a>
 
         <a
-          href="/"
-          className="whitespace-nowrap text-xs font-semibold hover:text-gray-300 sm:text-sm"
+          href="/#shop"
+          className="text-sm font-bold transition hover:text-gray-300"
         >
-          BACK TO HOME
+          BACK TO SHOP
         </a>
       </nav>
 
-      <section className="mx-auto max-w-7xl px-5 py-12 md:px-12">
-        <div>
-          <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
-            DIRECT ORDER
-          </p>
+      <section className="mx-auto max-w-6xl px-5 py-10 md:px-12 md:py-14">
+        <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
+          DARKY T CHECKOUT
+        </p>
 
-          <h1 className="mt-2 text-4xl font-black">
-            DELIVERY DETAILS
-          </h1>
-        </div>
+        <h1 className="mt-3 text-4xl font-black md:text-5xl">
+          DELIVERY DETAILS
+        </h1>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
-          <div className="space-y-8">
-            {/* Selected Product */}
-            <div className="grid gap-5 bg-white p-5 shadow-sm sm:grid-cols-[180px_1fr]">
-              <img
-                src={order.image}
-                alt={order.name}
-                className="aspect-square w-full object-cover"
-              />
-
-              <div className="flex flex-col justify-center">
-                <p className="text-sm font-semibold tracking-[0.2em] text-gray-500">
-                  SELECTED PRODUCT
-                </p>
-
-                <h2 className="mt-2 text-2xl font-black">
-                  {order.name}
-                </h2>
-
-                <p className="mt-4 text-gray-600">
-                  Size:{" "}
-                  <span className="font-bold text-black">
-                    {order.size}
-                  </span>
-                </p>
-
-                <p className="mt-2 text-gray-600">
-                  Quantity:{" "}
-                  <span className="font-bold text-black">
-                    {order.quantity}
-                  </span>
-                </p>
-
-                <p className="mt-2 text-xl font-black">
-                  Rs. {subtotal.toLocaleString()}
-                </p>
-              </div>
-            </div>
-
-            {/* Customer Details */}
-            <div className="bg-white p-6 shadow-sm">
-              <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
-                CUSTOMER INFORMATION
-              </p>
-
-              <h2 className="mt-2 text-2xl font-black">
-                ENTER DELIVERY DETAILS
-              </h2>
-
-              <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <label className="mb-2 block text-sm font-bold">
-                    FULL NAME
-                  </label>
-
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(event) =>
-                      setCustomerName(event.target.value)
-                    }
-                    placeholder="Enter your full name"
-                    className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-bold">
-                    PRIMARY PHONE NUMBER
-                  </label>
-
-                  <input
-                    type="tel"
-                    value={primaryPhone}
-                    onChange={(event) =>
-                      setPrimaryPhone(event.target.value)
-                    }
-                    placeholder="07XXXXXXXX"
-                    className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-bold">
-                    ALTERNATIVE PHONE NUMBER
-                  </label>
-
-                  <input
-                    type="tel"
-                    value={alternativePhone}
-                    onChange={(event) =>
-                      setAlternativePhone(event.target.value)
-                    }
-                    placeholder="07XXXXXXXX (Optional)"
-                    className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-bold">
-                    DISTRICT
-                  </label>
-
-                  <input
-                    type="text"
-                    value={district}
-                    onChange={(event) =>
-                      setDistrict(event.target.value)
-                    }
-                    placeholder="Example: Galle"
-                    className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="mb-2 block text-sm font-bold">
-                    DELIVERY ADDRESS
-                  </label>
-
-                  <textarea
-                    value={address}
-                    onChange={(event) =>
-                      setAddress(event.target.value)
-                    }
-                    placeholder="Enter your full delivery address"
-                    rows={4}
-                    className="w-full resize-none border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <div className="mt-10 grid gap-8 lg:grid-cols-2">
           {/* Order Summary */}
-          <aside className="h-fit bg-black p-7 text-white">
+          <div className="bg-white p-6 shadow-sm md:p-8">
             <h2 className="text-2xl font-black">
               ORDER SUMMARY
             </h2>
 
-            <div className="mt-7 flex justify-between border-b border-white/20 pb-5">
-              <span>Quantity</span>
-              <span>{order.quantity}</span>
-            </div>
-
-            <div className="flex justify-between border-b border-white/20 py-5">
-              <span>Subtotal</span>
-              <span>Rs. {subtotal.toLocaleString()}</span>
-            </div>
-
-            <div className="border-b border-white/20 py-5">
-              <div className="flex justify-between gap-4">
-                <span>Delivery</span>
-
-                <span className="text-right">
-                  {hasFixedDeliveryFee
-                    ? `Rs. ${deliveryFee.toLocaleString()}`
-                    : "Confirm via WhatsApp"}
-                </span>
+            <div className="mt-7 flex flex-col gap-6 sm:flex-row">
+              <div className="w-full overflow-hidden bg-gray-100 sm:w-44">
+                <img
+                  src={
+                    currentOrderItem.image
+                  }
+                  alt={
+                    currentOrderItem.name
+                  }
+                  className="aspect-square h-full w-full object-cover"
+                />
               </div>
 
-              {!hasFixedDeliveryFee && (
-                <p className="mt-3 text-sm leading-6 text-gray-300">
-                  Orders above 5 T-shirts have a custom delivery fee.
-                  Confirm it through WhatsApp chat.
-                </p>
-              )}
+              <div className="flex-1">
+                <h3 className="text-2xl font-black">
+                  {
+                    currentOrderItem.name
+                  }
+                </h3>
+
+                <div className="mt-5 space-y-3 text-sm">
+                  <div className="flex justify-between gap-5 border-b pb-3">
+                    <span className="text-gray-500">
+                      Colour
+                    </span>
+
+                    <span className="font-bold">
+                      {selectedColour}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-5 border-b pb-3">
+                    <span className="text-gray-500">
+                      Size
+                    </span>
+
+                    <span className="font-bold">
+                      {
+                        currentOrderItem.size
+                      }
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-5 border-b pb-3">
+                    <span className="text-gray-500">
+                      Quantity
+                    </span>
+
+                    <span className="font-bold">
+                      {
+                        currentOrderItem.quantity
+                      }
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-5 border-b pb-3">
+                    <span className="text-gray-500">
+                      Unit Price
+                    </span>
+
+                    <span className="font-bold">
+                      Rs.{" "}
+                      {currentOrderItem.price.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-5 border-b pb-3">
+                    <span className="text-gray-500">
+                      Subtotal
+                    </span>
+
+                    <span className="font-bold">
+                      Rs.{" "}
+                      {subtotal.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-5 border-b pb-3">
+                    <span className="text-gray-500">
+                      Delivery Fee
+                    </span>
+
+                    <span className="text-right font-bold">
+                      {hasFixedDeliveryFee
+                        ? `Rs. ${deliveryFee.toLocaleString()}`
+                        : "Confirm via WhatsApp"}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-between py-6 text-xl font-black">
-              <span>
-                {hasFixedDeliveryFee ? "FINAL TOTAL" : "SUBTOTAL"}
+            <div className="mt-7 flex items-center justify-between border-y py-5">
+              <span className="text-lg font-bold">
+                {hasFixedDeliveryFee
+                  ? "FINAL TOTAL"
+                  : "SUBTOTAL"}
               </span>
 
-              <span>
+              <span className="text-2xl font-black">
                 Rs.{" "}
                 {(hasFixedDeliveryFee
                   ? finalTotal
@@ -336,46 +482,200 @@ ${totalMessage}`
               </span>
             </div>
 
-            {!formComplete && (
-              <p className="mb-4 text-sm leading-6 text-yellow-300">
-                Fill in your name, primary phone number, district and
-                delivery address before checkout.
-              </p>
+            {!hasFixedDeliveryFee && (
+              <div className="mt-5 border border-orange-200 bg-orange-50 p-4 text-sm font-semibold leading-6 text-orange-700">
+                Products 5කට වැඩි නිසා delivery
+                fee සහ final total එක WhatsApp
+                එකෙන් confirm කරනවා.
+              </div>
             )}
 
-            <a
-              href={
-                formComplete
-                  ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
-                  : "#"
-              }
-              target={formComplete ? "_blank" : undefined}
-              rel={formComplete ? "noopener noreferrer" : undefined}
-              onClick={(event) => {
-                if (!formComplete) {
-                  event.preventDefault();
+            <p className="mt-5 text-sm leading-6 text-gray-500">
+              Products 1–5 සඳහා delivery fee
+              එක Rs. 350යි.
+            </p>
 
-                  alert(
-                    "Please fill in your name, primary phone number, district and delivery address."
-                  );
-                }
-              }}
-              className={`block w-full px-5 py-4 text-center font-black transition ${
-                formComplete
-                  ? "bg-white text-black hover:bg-gray-200"
-                  : "cursor-not-allowed bg-gray-600 text-gray-300"
-              }`}
+            <button
+              type="button"
+              onClick={removeDirectOrder}
+              className="mt-6 w-full border border-red-600 px-5 py-3 font-bold text-red-600 transition hover:bg-red-600 hover:text-white"
             >
-              ORDER ON WHATSAPP
-            </a>
+              REMOVE THIS ORDER
+            </button>
+          </div>
 
-            <a
-              href="/#shop"
-              className="mt-4 block w-full border border-white px-5 py-4 text-center font-black transition hover:bg-white hover:text-black"
-            >
-              CHANGE PRODUCT
-            </a>
-          </aside>
+          {/* Customer Form */}
+          <form
+            onSubmit={sendWhatsAppOrder}
+            className="bg-white p-6 shadow-sm md:p-8"
+          >
+            <h2 className="text-2xl font-black">
+              CUSTOMER DETAILS
+            </h2>
+
+            <p className="mt-3 text-sm text-gray-500">
+              Phone numbers දෙකම අනිවාර්යයි.
+            </p>
+
+            <div className="mt-7 space-y-5">
+              <div>
+                <label className="mb-2 block text-sm font-bold">
+                  FULL NAME *
+                </label>
+
+                <input
+                  type="text"
+                  required
+                  value={customerName}
+                  onChange={(event) =>
+                    setCustomerName(
+                      event.target.value
+                    )
+                  }
+                  placeholder="ඔයාගේ සම්පූර්ණ නම"
+                  autoComplete="name"
+                  className="w-full border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold">
+                  PRIMARY PHONE NUMBER *
+                </label>
+
+                <input
+                  type="tel"
+                  required
+                  value={primaryPhone}
+                  onChange={(event) =>
+                    setPrimaryPhone(
+                      event.target.value
+                    )
+                  }
+                  placeholder="07XXXXXXXX"
+                  autoComplete="tel"
+                  className="w-full border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold">
+                  ALTERNATIVE PHONE NUMBER *
+                </label>
+
+                <input
+                  type="tel"
+                  required
+                  value={
+                    alternativePhone
+                  }
+                  onChange={(event) =>
+                    setAlternativePhone(
+                      event.target.value
+                    )
+                  }
+                  placeholder="07XXXXXXXX"
+                  className="w-full border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                />
+
+                <p className="mt-2 text-xs text-gray-500">
+                  Primary number එකට වෙනස් contact
+                  number එකක් දාන්න.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold">
+                  DISTRICT *
+                </label>
+
+                <select
+                  required
+                  value={district}
+                  onChange={(event) =>
+                    setDistrict(
+                      event.target.value
+                    )
+                  }
+                  className="w-full border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-black"
+                >
+                  <option value="">
+                    Select district
+                  </option>
+
+                  {districts.map(
+                    (districtName) => (
+                      <option
+                        key={districtName}
+                        value={districtName}
+                      >
+                        {districtName}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold">
+                  DELIVERY ADDRESS *
+                </label>
+
+                <textarea
+                  required
+                  value={address}
+                  onChange={(event) =>
+                    setAddress(
+                      event.target.value
+                    )
+                  }
+                  rows={4}
+                  placeholder="ගෙදර අංකය, පාර, නගරය"
+                  autoComplete="street-address"
+                  className="w-full resize-none border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold">
+                  SPECIAL NOTE — OPTIONAL
+                </label>
+
+                <textarea
+                  value={note}
+                  onChange={(event) =>
+                    setNote(
+                      event.target.value
+                    )
+                  }
+                  rows={3}
+                  placeholder="Order එක ගැන විශේෂ සටහනක් තිබේ නම්"
+                  className="w-full resize-none border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                />
+              </div>
+
+              {errorMessage && (
+                <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                  {errorMessage}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="flex w-full items-center justify-center gap-3 bg-green-600 px-6 py-4 font-black text-white transition hover:bg-green-700"
+              >
+                <FaWhatsapp className="text-2xl" />
+
+                SEND ORDER VIA WHATSAPP
+              </button>
+
+              <p className="text-center text-xs leading-5 text-gray-500">
+                Product, colour, size, delivery
+                fee සහ phone numbers දෙකම WhatsApp
+                message එකට automatically යනවා.
+              </p>
+            </div>
+          </form>
         </div>
       </section>
     </main>
