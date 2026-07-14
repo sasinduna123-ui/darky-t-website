@@ -13,6 +13,7 @@ type CartItem = {
 
 export default function Home() {
   const [cartCount, setCartCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   function updateCartCount() {
     try {
@@ -41,48 +42,150 @@ export default function Home() {
 
     window.addEventListener("focus", updateCartCount);
     window.addEventListener("storage", updateCartCount);
+    window.addEventListener(
+      "darky-cart-updated",
+      updateCartCount
+    );
 
     return () => {
-      window.removeEventListener("focus", updateCartCount);
-      window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener(
+        "focus",
+        updateCartCount
+      );
+
+      window.removeEventListener(
+        "storage",
+        updateCartCount
+      );
+
+      window.removeEventListener(
+        "darky-cart-updated",
+        updateCartCount
+      );
     };
   }, []);
+
+  function closeMenu() {
+    setMenuOpen(false);
+  }
 
   return (
     <main className="min-h-screen bg-black text-white">
       {/* Navbar */}
-      <nav className="flex items-center justify-between border-b border-white/10 px-4 py-4 sm:px-6 md:px-12">
-        <a
-          href="#home"
-          className="text-lg font-black tracking-[0.18em] sm:text-2xl sm:tracking-[0.25em] md:text-3xl"
-        >
-          DARKY T
-        </a>
-
-        <div className="hidden items-center gap-8 text-sm font-semibold lg:flex">
-          <a href="#home" className="transition hover:text-gray-400">
-            HOME
+      <nav className="relative z-50 border-b border-white/10 bg-black">
+        <div className="flex items-center justify-between px-4 py-4 sm:px-6 md:px-12">
+          <a
+            href="#home"
+            onClick={closeMenu}
+            className="text-lg font-black tracking-[0.18em] sm:text-2xl sm:tracking-[0.25em] md:text-3xl"
+          >
+            DARKY T
           </a>
 
-          <a href="#shop" className="transition hover:text-gray-400">
-            SHOP
-          </a>
+          {/* Desktop Menu */}
+          <div className="hidden items-center gap-8 text-sm font-semibold lg:flex">
+            <a
+              href="#home"
+              className="transition hover:text-gray-400"
+            >
+              HOME
+            </a>
 
-          <a href="#about" className="transition hover:text-gray-400">
-            ABOUT
-          </a>
+            <a
+              href="#shop"
+              className="transition hover:text-gray-400"
+            >
+              SHOP
+            </a>
 
-          <a href="#contact" className="transition hover:text-gray-400">
-            CONTACT
-          </a>
+            <a
+              href="#reviews"
+              className="transition hover:text-gray-400"
+            >
+              REVIEWS
+            </a>
+
+            <a
+              href="#about"
+              className="transition hover:text-gray-400"
+            >
+              ABOUT
+            </a>
+
+            <a
+              href="#contact"
+              className="transition hover:text-gray-400"
+            >
+              CONTACT
+            </a>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <a
+              href="/cart"
+              className="whitespace-nowrap rounded-full bg-white px-4 py-2 text-xs font-black text-black transition hover:scale-105 hover:bg-gray-200 sm:px-5 sm:py-3 sm:text-sm"
+            >
+              CART ({cartCount})
+            </a>
+
+            {/* Mobile Menu Button */}
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex h-10 w-10 items-center justify-center border border-white/30 text-2xl lg:hidden"
+              aria-label="Open menu"
+            >
+              {menuOpen ? "×" : "☰"}
+            </button>
+          </div>
         </div>
 
-        <a
-          href="#shop"
-          className="whitespace-nowrap rounded-full bg-white px-4 py-2 text-xs font-black text-black transition hover:scale-105 hover:bg-gray-200 sm:px-6 sm:py-3 sm:text-base"
-        >
-          SHOP NOW
-        </a>
+        {/* Mobile Menu */}
+        {menuOpen && (
+          <div className="absolute left-0 top-full w-full border-t border-white/10 bg-black px-5 py-6 shadow-2xl lg:hidden">
+            <div className="flex flex-col">
+              <a
+                href="#home"
+                onClick={closeMenu}
+                className="border-b border-white/10 py-4 font-bold transition hover:text-gray-400"
+              >
+                HOME
+              </a>
+
+              <a
+                href="#shop"
+                onClick={closeMenu}
+                className="border-b border-white/10 py-4 font-bold transition hover:text-gray-400"
+              >
+                SHOP
+              </a>
+
+              <a
+                href="#reviews"
+                onClick={closeMenu}
+                className="border-b border-white/10 py-4 font-bold transition hover:text-gray-400"
+              >
+                REVIEWS
+              </a>
+
+              <a
+                href="#about"
+                onClick={closeMenu}
+                className="border-b border-white/10 py-4 font-bold transition hover:text-gray-400"
+              >
+                ABOUT
+              </a>
+
+              <a
+                href="#contact"
+                onClick={closeMenu}
+                className="py-4 font-bold transition hover:text-gray-400"
+              >
+                CONTACT
+              </a>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
@@ -148,7 +251,10 @@ export default function Home() {
           <div className="mt-10 grid gap-8 md:grid-cols-3">
             {/* Black Product */}
             <div>
-              <a href="/product" className="block overflow-hidden">
+              <a
+                href="/product"
+                className="block overflow-hidden"
+              >
                 <img
                   src="/images/TSHIRT1.jpg"
                   alt="Essential Black Tee"
@@ -176,7 +282,10 @@ export default function Home() {
 
             {/* White Product */}
             <div>
-              <a href="/product/white" className="block overflow-hidden">
+              <a
+                href="/product/white"
+                className="block overflow-hidden"
+              >
                 <img
                   src="/images/TSHIRT2.jpg"
                   alt="Heavy Cotton White Tee"
@@ -204,7 +313,10 @@ export default function Home() {
 
             {/* Grey Product */}
             <div>
-              <a href="/product/grey" className="block overflow-hidden">
+              <a
+                href="/product/grey"
+                className="block overflow-hidden"
+              >
                 <img
                   src="/images/TSHIRT3.jpg"
                   alt="Dark Grey Oversized Tee"
@@ -233,6 +345,111 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Reviews Section */}
+      <section
+        id="reviews"
+        className="bg-gray-100 px-6 py-20 text-black md:px-12"
+      >
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center">
+            <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
+              CUSTOMER REVIEWS
+            </p>
+
+            <h2 className="mt-3 text-4xl font-black md:text-5xl">
+              WHAT OUR CUSTOMERS SAY
+            </h2>
+
+            <p className="mx-auto mt-5 max-w-2xl leading-7 text-gray-600">
+              DARKY T products ගැන අපේ customersලා කියන අදහස්.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <div className="flex h-full flex-col justify-between bg-white p-7 shadow-sm">
+              <div>
+                <div className="text-xl tracking-[0.2em]">
+                  ★★★★★
+                </div>
+
+                <p className="mt-5 leading-7 text-gray-600">
+                  “T-shirt එකේ quality එක ගොඩක් හොඳයි.
+                  Material එක thick වගේම comfortable.
+                  Oversized fit එකත් හරියටම තිබුණා.”
+                </p>
+              </div>
+
+              <div className="mt-7 border-t pt-5">
+                <p className="font-black">
+                  KAVINDU
+                </p>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Verified Customer
+                </p>
+              </div>
+            </div>
+
+            <div className="flex h-full flex-col justify-between bg-white p-7 shadow-sm">
+              <div>
+                <div className="text-xl tracking-[0.2em]">
+                  ★★★★★
+                </div>
+
+                <p className="mt-5 leading-7 text-gray-600">
+                  “White T-shirt එක ලස්සනට තිබුණා.
+                  Stitching සහ finishing දෙකම හොඳයි.
+                  Delivery එකත් ඉක්මනින් ලැබුණා.”
+                </p>
+              </div>
+
+              <div className="mt-7 border-t pt-5">
+                <p className="font-black">
+                  NETHMI
+                </p>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Verified Customer
+                </p>
+              </div>
+            </div>
+
+            <div className="flex h-full flex-col justify-between bg-white p-7 shadow-sm">
+              <div>
+                <div className="text-xl tracking-[0.2em]">
+                  ★★★★★
+                </div>
+
+                <p className="mt-5 leading-7 text-gray-600">
+                  “Size guide එකෙන් size එක select කරන්න ලේසි
+                  වුණා. Dark grey colour එකත් photo එකේ වගේම
+                  තිබුණා.”
+                </p>
+              </div>
+
+              <div className="mt-7 border-t pt-5">
+                <p className="font-black">
+                  SACHIN
+                </p>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Verified Customer
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 text-center">
+            <a
+              href="#shop"
+              className="inline-block bg-black px-8 py-4 font-black text-white transition hover:bg-gray-800"
+            >
+              SHOP NOW
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* About Section */}
       <section
         id="about"
@@ -253,34 +470,47 @@ export default function Home() {
 
           <div className="space-y-6 text-gray-300">
             <p className="leading-7">
-              DARKY T is a premium streetwear clothing brand focused on
-              oversized T-shirts, comfort and bold designs.
+              DARKY T is a premium streetwear clothing
+              brand focused on oversized T-shirts,
+              comfort and bold designs.
             </p>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="border border-white/20 p-5">
-                <h3 className="text-xl font-black">240 GSM</h3>
+                <h3 className="text-xl font-black">
+                  240 GSM
+                </h3>
+
                 <p className="mt-2 text-sm text-gray-400">
                   Heavy cotton fabric
                 </p>
               </div>
 
               <div className="border border-white/20 p-5">
-                <h3 className="text-xl font-black">OVERSIZED</h3>
+                <h3 className="text-xl font-black">
+                  OVERSIZED
+                </h3>
+
                 <p className="mt-2 text-sm text-gray-400">
                   Premium relaxed fit
                 </p>
               </div>
 
               <div className="border border-white/20 p-5">
-                <h3 className="text-xl font-black">PREMIUM</h3>
+                <h3 className="text-xl font-black">
+                  PREMIUM
+                </h3>
+
                 <p className="mt-2 text-sm text-gray-400">
                   Quality print and finish
                 </p>
               </div>
 
               <div className="border border-white/20 p-5">
-                <h3 className="text-xl font-black">ISLANDWIDE</h3>
+                <h3 className="text-xl font-black">
+                  ISLANDWIDE
+                </h3>
+
                 <p className="mt-2 text-sm text-gray-400">
                   Delivery across Sri Lanka
                 </p>
@@ -305,8 +535,9 @@ export default function Home() {
           </h2>
 
           <p className="mx-auto mt-5 max-w-xl leading-7 text-gray-600">
-            Select a product, choose the size and quantity, add it to the cart,
-            and complete the order through WhatsApp checkout.
+            Select a product, choose the size and quantity,
+            add it to the cart, and complete the order
+            through WhatsApp checkout.
           </p>
 
           <a
