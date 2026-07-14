@@ -4,84 +4,83 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
       {/* Navbar */}
-      <nav className="flex items-center justify-between border-b border-white/10 px-6 py-5 md:px-12">
-        <h1 className="text-2xl font-black tracking-[0.35em]">
+      <nav className="flex items-center justify-between border-b border-white/10 px-4 py-4 sm:px-6 md:px-12">
+        <a
+          href="#home"
+          className="text-lg font-black tracking-[0.18em] sm:text-2xl sm:tracking-[0.25em] md:text-3xl"
+        >
           DARKY T
-        </h1>
+        </a>
 
-        <div className="hidden items-center gap-8 text-sm md:flex">
-          <a href="#home" className="hover:text-gray-400">
+        <div className="hidden items-center gap-8 text-sm font-semibold lg:flex">
+          <a href="#home" className="transition hover:text-gray-400">
             HOME
           </a>
 
-          <a href="#shop" className="hover:text-gray-400">
+          <a href="#shop" className="transition hover:text-gray-400">
             SHOP
           </a>
 
-          <a href="#about" className="hover:text-gray-400">
+          <a href="#about" className="transition hover:text-gray-400">
             ABOUT
           </a>
 
-          <a href="#contact" className="hover:text-gray-400">
+          <a href="#contact" className="transition hover:text-gray-400">
             CONTACT
           </a>
-
-          <a href="/cart" className="hover:text-gray-400">
-            CART
-          </a>
         </div>
 
-        <div className="flex items-center gap-3">
-          <a
-            href="/cart"
-            className="rounded-full border border-white px-4 py-2 text-sm font-semibold transition hover:bg-white hover:text-black md:hidden"
-          >
-            CART
-          </a>
-
-          <a
-            href="#shop"
-            className="rounded-full border border-white px-5 py-2 text-sm font-semibold transition hover:bg-white hover:text-black"
-          >
-            SHOP NOW
-          </a>
-        </div>
+        <a
+          href="#shop"
+          className="whitespace-nowrap rounded-full bg-white px-4 py-2 text-xs font-black text-black transition hover:scale-105 hover:bg-gray-200 sm:px-6 sm:py-3 sm:text-base"
+        >
+          SHOP NOW
+        </a>
       </nav>
 
       {/* Hero Section */}
       <section
         id="home"
-        className="relative flex min-h-[85vh] items-center justify-center bg-cover bg-center px-6 text-center"
+        className="relative flex min-h-[85vh] items-center justify-center bg-cover bg-center px-5 text-center"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url('/images/hero.jpg')",
+            "linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.78)), url('/images/hero.jpg')",
         }}
       >
-        <div>
-          <p className="mb-4 text-sm tracking-[0.4em] text-gray-300">
+        <div className="max-w-4xl">
+          <p className="mb-5 text-xs font-semibold tracking-[0.3em] text-gray-300 sm:text-sm sm:tracking-[0.4em]">
             PREMIUM STREETWEAR
           </p>
 
-          <h2 className="text-5xl font-extrabold leading-tight md:text-7xl">
+          <h1 className="text-4xl font-black leading-tight sm:text-6xl md:text-8xl">
             PREMIUM
             <br />
             OVERSIZED
             <br />
             T-SHIRTS
-          </h2>
+          </h1>
 
-          <p className="mt-6 text-lg text-gray-300">
+          <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-gray-300 sm:text-lg">
             Designed for comfort.
             <br />
             Made to stand out.
           </p>
 
-          <a
-            href="#shop"
-            className="mt-10 inline-block rounded-full bg-white px-8 py-3 font-semibold text-black transition-all duration-300 hover:scale-105 hover:bg-gray-200"
-          >
-            SHOP NOW
-          </a>
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
+            <a
+              href="#shop"
+              className="whitespace-nowrap rounded-full bg-white px-7 py-4 text-sm font-black text-black transition hover:scale-105 hover:bg-gray-200 sm:px-8 sm:text-base"
+            >
+              SHOP NOW
+            </a>
+
+            <a
+              href="/cart"
+              className="whitespace-nowrap rounded-full border-2 border-white px-7 py-4 text-sm font-black text-white transition hover:bg-white hover:text-black sm:px-8 sm:text-base"
+            >
+              VIEW CART
+            </a>
+          </div>
         </div>
       </section>
 
@@ -95,17 +94,14 @@ export default function Home() {
             NEW COLLECTION
           </p>
 
-          <h3 className="mt-3 text-4xl font-black">
+          <h2 className="mt-3 text-4xl font-black md:text-5xl">
             BEST SELLERS
-          </h3>
+          </h2>
 
           <div className="mt-10 grid gap-8 md:grid-cols-3">
             {/* Black Product */}
             <div>
-              <a
-                href="/product"
-                className="block overflow-hidden"
-              >
+              <a href="/product" className="block overflow-hidden">
                 <img
                   src="/images/TSHIRT1.jpg"
                   alt="Essential Black Tee"
@@ -114,31 +110,37 @@ export default function Home() {
               </a>
 
               <a href="/product">
-                <h4 className="mt-5 text-lg font-bold hover:underline">
+                <h3 className="mt-5 text-xl font-black hover:underline">
                   Essential Black Tee
-                </h4>
+                </h3>
               </a>
 
-              <p className="mt-1 text-gray-600">
+              <p className="mt-2 text-lg font-semibold text-gray-700">
                 Rs. 3,650
               </p>
 
-              <a
-                href={`https://wa.me/${whatsappNumber}?text=I%20want%20to%20order%20Essential%20Black%20Tee`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-block w-full bg-black px-5 py-3 text-center font-semibold text-white transition hover:bg-gray-800"
-              >
-                ORDER ON WHATSAPP
-              </a>
+              <div className="mt-4 grid gap-3">
+                <a
+                  href="/product"
+                  className="w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
+                >
+                  VIEW PRODUCT
+                </a>
+
+                <a
+                  href={`https://wa.me/${whatsappNumber}?text=I%20want%20to%20order%20Essential%20Black%20Tee`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full border-2 border-black px-5 py-3 text-center font-black transition hover:bg-black hover:text-white"
+                >
+                  ORDER ON WHATSAPP
+                </a>
+              </div>
             </div>
 
             {/* White Product */}
             <div>
-              <a
-                href="/product/white"
-                className="block overflow-hidden"
-              >
+              <a href="/product/white" className="block overflow-hidden">
                 <img
                   src="/images/TSHIRT2.jpg"
                   alt="Heavy Cotton White Tee"
@@ -147,31 +149,37 @@ export default function Home() {
               </a>
 
               <a href="/product/white">
-                <h4 className="mt-5 text-lg font-bold hover:underline">
+                <h3 className="mt-5 text-xl font-black hover:underline">
                   Heavy Cotton White Tee
-                </h4>
+                </h3>
               </a>
 
-              <p className="mt-1 text-gray-600">
+              <p className="mt-2 text-lg font-semibold text-gray-700">
                 Rs. 3,650
               </p>
 
-              <a
-                href={`https://wa.me/${whatsappNumber}?text=I%20want%20to%20order%20Heavy%20Cotton%20White%20Tee`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-block w-full bg-black px-5 py-3 text-center font-semibold text-white transition hover:bg-gray-800"
-              >
-                ORDER ON WHATSAPP
-              </a>
+              <div className="mt-4 grid gap-3">
+                <a
+                  href="/product/white"
+                  className="w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
+                >
+                  VIEW PRODUCT
+                </a>
+
+                <a
+                  href={`https://wa.me/${whatsappNumber}?text=I%20want%20to%20order%20Heavy%20Cotton%20White%20Tee`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full border-2 border-black px-5 py-3 text-center font-black transition hover:bg-black hover:text-white"
+                >
+                  ORDER ON WHATSAPP
+                </a>
+              </div>
             </div>
 
             {/* Grey Product */}
             <div>
-              <a
-                href="/product/grey"
-                className="block overflow-hidden"
-              >
+              <a href="/product/grey" className="block overflow-hidden">
                 <img
                   src="/images/TSHIRT3.jpg"
                   alt="Dark Grey Oversized Tee"
@@ -180,23 +188,32 @@ export default function Home() {
               </a>
 
               <a href="/product/grey">
-                <h4 className="mt-5 text-lg font-bold hover:underline">
+                <h3 className="mt-5 text-xl font-black hover:underline">
                   Dark Grey Oversized Tee
-                </h4>
+                </h3>
               </a>
 
-              <p className="mt-1 text-gray-600">
+              <p className="mt-2 text-lg font-semibold text-gray-700">
                 Rs. 3,650
               </p>
 
-              <a
-                href={`https://wa.me/${whatsappNumber}?text=I%20want%20to%20order%20Dark%20Grey%20Oversized%20Tee`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-block w-full bg-black px-5 py-3 text-center font-semibold text-white transition hover:bg-gray-800"
-              >
-                ORDER ON WHATSAPP
-              </a>
+              <div className="mt-4 grid gap-3">
+                <a
+                  href="/product/grey"
+                  className="w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
+                >
+                  VIEW PRODUCT
+                </a>
+
+                <a
+                  href={`https://wa.me/${whatsappNumber}?text=I%20want%20to%20order%20Dark%20Grey%20Oversized%20Tee`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full border-2 border-black px-5 py-3 text-center font-black transition hover:bg-black hover:text-white"
+                >
+                  ORDER ON WHATSAPP
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -213,55 +230,43 @@ export default function Home() {
               ABOUT DARKY T
             </p>
 
-            <h3 className="mt-4 text-4xl font-black md:text-5xl">
+            <h2 className="mt-4 text-4xl font-black md:text-5xl">
               MADE TO
               <br />
               STAND OUT.
-            </h3>
+            </h2>
           </div>
 
           <div className="space-y-6 text-gray-300">
-            <p>
+            <p className="leading-7">
               DARKY T is a premium streetwear clothing brand focused on
               oversized T-shirts, comfort and bold designs.
             </p>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="border border-white/20 p-5">
-                <h4 className="text-xl font-bold">
-                  240 GSM
-                </h4>
-
+                <h3 className="text-xl font-black">240 GSM</h3>
                 <p className="mt-2 text-sm text-gray-400">
                   Heavy cotton fabric
                 </p>
               </div>
 
               <div className="border border-white/20 p-5">
-                <h4 className="text-xl font-bold">
-                  OVERSIZED
-                </h4>
-
+                <h3 className="text-xl font-black">OVERSIZED</h3>
                 <p className="mt-2 text-sm text-gray-400">
                   Premium relaxed fit
                 </p>
               </div>
 
               <div className="border border-white/20 p-5">
-                <h4 className="text-xl font-bold">
-                  PREMIUM
-                </h4>
-
+                <h3 className="text-xl font-black">PREMIUM</h3>
                 <p className="mt-2 text-sm text-gray-400">
                   Quality print and finish
                 </p>
               </div>
 
               <div className="border border-white/20 p-5">
-                <h4 className="text-xl font-bold">
-                  ISLANDWIDE
-                </h4>
-
+                <h3 className="text-xl font-black">ISLANDWIDE</h3>
                 <p className="mt-2 text-sm text-gray-400">
                   Delivery across Sri Lanka
                 </p>
@@ -281,11 +286,11 @@ export default function Home() {
             CONTACT US
           </p>
 
-          <h3 className="mt-4 text-4xl font-black md:text-5xl">
+          <h2 className="mt-4 text-4xl font-black md:text-5xl">
             READY TO ORDER?
-          </h3>
+          </h2>
 
-          <p className="mx-auto mt-5 max-w-xl text-gray-600">
+          <p className="mx-auto mt-5 max-w-xl leading-7 text-gray-600">
             Contact DARKY T through WhatsApp or TikTok for orders and more
             information.
           </p>
@@ -294,17 +299,17 @@ export default function Home() {
             href={`https://wa.me/${whatsappNumber}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-8 inline-block rounded-full bg-black px-8 py-4 font-bold text-white transition hover:scale-105 hover:bg-gray-800"
+            className="mt-8 inline-block whitespace-nowrap rounded-full bg-black px-8 py-4 font-black text-white transition hover:scale-105 hover:bg-gray-800"
           >
             CHAT ON WHATSAPP
           </a>
 
-          <div className="mt-10 flex flex-wrap justify-center gap-8 font-semibold">
+          <div className="mt-10">
             <a
               href="https://www.tiktok.com/@sasindu_nathee?_r=1&_t=ZS-981NZk7vYkz"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-gray-500"
+              className="font-black hover:text-gray-500"
             >
               TIKTOK
             </a>
@@ -314,13 +319,20 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-white/10 bg-black px-6 py-10 text-center text-white">
-        <h3 className="text-2xl font-black tracking-[0.35em]">
+        <h2 className="text-2xl font-black tracking-[0.35em]">
           DARKY T
-        </h3>
+        </h2>
 
         <p className="mt-4 text-sm text-gray-400">
           Premium Oversized Streetwear
         </p>
+
+        <a
+          href="#shop"
+          className="mt-6 inline-block font-semibold text-gray-400 hover:text-white"
+        >
+          SHOP
+        </a>
 
         <p className="mt-6 text-xs text-gray-500">
           © 2026 DARKY T. All rights reserved.
