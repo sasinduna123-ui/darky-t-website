@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { FaWhatsapp } from "react-icons/fa";
+
 import CartCount from "@/app/components/CartCount";
 import SizeGuide from "@/app/components/SizeGuide";
 import { getProductBySlug } from "@/app/data/products";
@@ -16,9 +17,16 @@ type CartItem = {
   quantity: number;
 };
 
-const sizes = ["XS", "S", "M", "L", "XL", "XXL"] as const;
+const productSizes = [
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+] as const;
 
-type Size = (typeof sizes)[number];
+type ProductSize = (typeof productSizes)[number];
 
 export default function DynamicProductPage() {
   const params = useParams();
@@ -26,7 +34,9 @@ export default function DynamicProductPage() {
 
   const foundProduct = getProductBySlug(slug);
 
-  const [selectedSize, setSelectedSize] = useState<Size>("M");
+  const [selectedSize, setSelectedSize] =
+    useState<ProductSize>("M");
+
   const [quantity, setQuantity] = useState(1);
 
   if (!foundProduct) {
@@ -54,7 +64,9 @@ export default function DynamicProductPage() {
 
   const product = foundProduct;
 
-  const selectedStock = product.stock[selectedSize];
+  const selectedStock =
+    product.stock[selectedSize] ?? 0;
+
   const isOutOfStock = selectedStock === 0;
   const total = product.price * quantity;
 
@@ -71,7 +83,8 @@ export default function DynamicProductPage() {
     };
 
     try {
-      const savedCart = localStorage.getItem("darky-cart");
+      const savedCart =
+        localStorage.getItem("darky-cart");
 
       const cart: CartItem[] = savedCart
         ? JSON.parse(savedCart)
@@ -127,7 +140,9 @@ export default function DynamicProductPage() {
 
       window.location.href = "/direct-order";
     } catch {
-      alert("Could not continue to delivery details.");
+      alert(
+        "Could not continue to delivery details."
+      );
     }
   }
 
@@ -190,12 +205,24 @@ export default function DynamicProductPage() {
                 SELECT SIZE
               </p>
 
-              <SizeGuide sizeGuide={product.sizeGuide} />
+              {product.productType === "tshirt" ? (
+                <SizeGuide
+                  productType="tshirt"
+                  sizeGuide={product.sizeGuide}
+                />
+              ) : (
+                <SizeGuide
+                  productType="pants"
+                  sizeGuide={product.sizeGuide}
+                />
+              )}
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {sizes.map((size) => {
-                const stock = product.stock[size];
+              {productSizes.map((size) => {
+                const stock =
+                  product.stock[size] ?? 0;
+
                 const soldOut = stock === 0;
 
                 return (
@@ -330,11 +357,13 @@ export default function DynamicProductPage() {
 
           {/* Product Features */}
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
-            {product.features.map((feature, index) => (
-              <p key={`${feature}-${index}`}>
-                ✓ {feature}
-              </p>
-            ))}
+            {product.features?.map(
+              (feature, index) => (
+                <p key={`${feature}-${index}`}>
+                  ✓ {feature}
+                </p>
+              )
+            )}
           </div>
         </div>
       </section>
