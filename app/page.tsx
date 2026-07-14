@@ -117,7 +117,7 @@ src="/images/TSHIRT3.jpg"
 />
 
         <h4 className="mt-5 text-lg font-bold">
-          Dark Grey Oversized Tee
+          Dark Grey Oversized Te
         </h4>
 
         <p className="mt-1 text-gray-600">
