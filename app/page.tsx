@@ -9,7 +9,7 @@ export default function Home() {
           DARKY T
         </h1>
 
-        <div className="hidden gap-8 text-sm md:flex">
+        <div className="hidden items-center gap-8 text-sm md:flex">
           <a href="#home" className="hover:text-gray-400">
             HOME
           </a>
@@ -25,14 +25,27 @@ export default function Home() {
           <a href="#contact" className="hover:text-gray-400">
             CONTACT
           </a>
+
+          <a href="/cart" className="hover:text-gray-400">
+            CART
+          </a>
         </div>
 
-        <a
-          href="#shop"
-          className="rounded-full border border-white px-5 py-2 text-sm font-semibold transition hover:bg-white hover:text-black"
-        >
-          SHOP NOW
-        </a>
+        <div className="flex items-center gap-3">
+          <a
+            href="/cart"
+            className="rounded-full border border-white px-4 py-2 text-sm font-semibold transition hover:bg-white hover:text-black md:hidden"
+          >
+            CART
+          </a>
+
+          <a
+            href="#shop"
+            className="rounded-full border border-white px-5 py-2 text-sm font-semibold transition hover:bg-white hover:text-black"
+          >
+            SHOP NOW
+          </a>
+        </div>
       </nav>
 
       {/* Hero Section */}
@@ -273,8 +286,8 @@ export default function Home() {
           </h3>
 
           <p className="mx-auto mt-5 max-w-xl text-gray-600">
-            Contact DARKY T through WhatsApp, Instagram, Facebook or TikTok
-            for orders and more information.
+            Contact DARKY T through WhatsApp or TikTok for orders and more
+            information.
           </p>
 
           <a
@@ -287,15 +300,15 @@ export default function Home() {
           </a>
 
           <div className="mt-10 flex flex-wrap justify-center gap-8 font-semibold">
-  <a
-    href="https://www.tiktok.com/@sasindu_nathee?_r=1&_t=ZS-981NZk7vYkz"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="hover:text-gray-500"
-  >
-    TIKTOK
-  </a>
-</div>
+            <a
+              href="https://www.tiktok.com/@sasindu_nathee?_r=1&_t=ZS-981NZk7vYkz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-500"
+            >
+              TIKTOK
+            </a>
+          </div>
         </div>
       </section>
 
