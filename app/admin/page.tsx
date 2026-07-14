@@ -73,8 +73,17 @@ export default function AdminProductPage() {
   const [name, setName] = useState("");
   const [shortName, setShortName] = useState("");
   const [price, setPrice] = useState("3650");
-  const [image, setImage] = useState("");
   const [description, setDescription] = useState("");
+
+  const [images, setImages] = useState([
+    "",
+    "",
+    "",
+    "",
+  ]);
+
+  const [selectedPreviewImage, setSelectedPreviewImage] =
+    useState(0);
 
   const [stock, setStock] = useState<Stock>({
     ...initialStock,
@@ -122,13 +131,42 @@ export default function AdminProductPage() {
       .replace(/\n/g, " ");
   }
 
+  function createImagePath(value: string) {
+    const trimmedValue = value.trim();
+
+    if (!trimmedValue) {
+      return "";
+    }
+
+    if (trimmedValue.startsWith("/images/")) {
+      return trimmedValue;
+    }
+
+    return `/images/${trimmedValue}`;
+  }
+
   const slug = useMemo(() => createSlug(name), [name]);
 
-  const imagePath = image.trim()
-    ? image.trim().startsWith("/images/")
-      ? image.trim()
-      : `/images/${image.trim()}`
-    : "/images/product-image.jpg";
+  const preparedImages = images.map(createImagePath);
+
+  const availableImages = preparedImages.filter(
+    (image) => image !== ""
+  );
+
+  const mainImage =
+    availableImages[0] || "/images/product-image.jpg";
+
+  const previewImage =
+    availableImages[selectedPreviewImage] || mainImage;
+
+  const generatedImages =
+    availableImages.length > 0
+      ? availableImages
+      : ["/images/product-image.jpg"];
+
+  const imagesCode = generatedImages
+    .map((image) => `    "${image}",`)
+    .join("\n");
 
   const tshirtSizeGuideCode = `sizeGuide: {
     XS: {
@@ -213,9 +251,16 @@ export default function AdminProductPage() {
   }",
   productType: "${productType}",
   price: ${Number(price) || 0},
-  image: "${imagePath}",
+
+  image: "${mainImage}",
+
+  images: [
+${imagesCode}
+  ],
+
   description:
     "${escapeText(description)}",
+
   stock: {
     XS: ${stock.XS},
     S: ${stock.S},
@@ -224,12 +269,14 @@ export default function AdminProductPage() {
     XL: ${stock.XL},
     XXL: ${stock.XXL},
   },
+
   features: [
     "${escapeText(features[0] || "")}",
     "${escapeText(features[1] || "")}",
     "${escapeText(features[2] || "")}",
     "${escapeText(features[3] || "")}",
   ],
+
   ${
     productType === "tshirt"
       ? tshirtSizeGuideCode
@@ -247,6 +294,16 @@ export default function AdminProductPage() {
       setFeatures([...pantsFeatures]);
       setPrice("4950");
     }
+  }
+
+  function updateImage(index: number, value: string) {
+    setImages((current) =>
+      current.map((image, imageIndex) =>
+        imageIndex === index ? value : image
+      )
+    );
+
+    setSelectedPreviewImage(0);
   }
 
   function updateStock(size: Size, value: string) {
@@ -316,8 +373,9 @@ export default function AdminProductPage() {
     setName("");
     setShortName("");
     setPrice("3650");
-    setImage("");
     setDescription("");
+    setImages(["", "", "", ""]);
+    setSelectedPreviewImage(0);
     setStock({ ...initialStock });
     setFeatures([...tshirtFeatures]);
 
@@ -371,7 +429,6 @@ export default function AdminProductPage() {
 
         <div className="mt-10 grid gap-8 lg:grid-cols-2">
           <div className="space-y-8">
-            {/* Product Details */}
             <div className="bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-black">
                 PRODUCT DETAILS
@@ -412,11 +469,7 @@ export default function AdminProductPage() {
                     onChange={(event) =>
                       setName(event.target.value)
                     }
-                    placeholder={
-                      productType === "tshirt"
-                        ? "Example: Black Oversized Tee"
-                        : "Example: Black Cargo Pants"
-                    }
+                    placeholder="Example: Black Oversized Tee"
                     className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                   />
                 </div>
@@ -454,26 +507,6 @@ export default function AdminProductPage() {
 
                 <div>
                   <label className="mb-2 block text-sm font-bold">
-                    IMAGE FILE NAME
-                  </label>
-
-                  <input
-                    value={image}
-                    onChange={(event) =>
-                      setImage(event.target.value)
-                    }
-                    placeholder="Example: black-pants.jpg"
-                    className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
-                  />
-
-                  <p className="mt-2 text-sm text-gray-500">
-                    Photo එක public/images folder එකට දාලා
-                    file name එක මෙතන දාන්න.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-bold">
                     DESCRIPTION
                   </label>
 
@@ -490,7 +523,40 @@ export default function AdminProductPage() {
               </div>
             </div>
 
-            {/* Features */}
+            <div className="bg-white p-6 shadow-sm md:p-8">
+              <h2 className="text-2xl font-black">
+                PRODUCT PHOTOS
+              </h2>
+
+              <p className="mt-3 text-sm leading-6 text-gray-500">
+                Photos `public/images` folder එකට දාලා file
+                names මෙතන දාන්න. පළමු photo එක homepage සහ
+                cart එකේ main photo එක වෙනවා.
+              </p>
+
+              <div className="mt-6 space-y-5">
+                {images.map((image, index) => (
+                  <div key={index}>
+                    <label className="mb-2 block text-sm font-bold">
+                      PHOTO {index + 1}
+                      {index === 0 ? " — MAIN PHOTO" : ""}
+                    </label>
+
+                    <input
+                      value={image}
+                      onChange={(event) =>
+                        updateImage(index, event.target.value)
+                      }
+                      placeholder={`Example: product-${
+                        index + 1
+                      }.jpg`}
+                      className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-black">
                 PRODUCT FEATURES
@@ -518,7 +584,6 @@ export default function AdminProductPage() {
               </div>
             </div>
 
-            {/* Stock */}
             <div className="bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-black">
                 STOCK BY SIZE
@@ -545,7 +610,6 @@ export default function AdminProductPage() {
               </div>
             </div>
 
-            {/* Size Guide */}
             <div className="bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-black">
                 {productType === "tshirt"
@@ -649,7 +713,6 @@ export default function AdminProductPage() {
             </button>
           </div>
 
-          {/* Preview and Code */}
           <div className="space-y-8">
             <div className="bg-white p-6 shadow-sm md:p-8">
               <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
@@ -658,11 +721,36 @@ export default function AdminProductPage() {
 
               <div className="mt-6 overflow-hidden bg-gray-100">
                 <img
-                  src={imagePath}
+                  src={previewImage}
                   alt={name || "Product preview"}
                   className="aspect-square w-full object-cover"
                 />
               </div>
+
+              {availableImages.length > 1 && (
+                <div className="mt-4 grid grid-cols-4 gap-3">
+                  {availableImages.map((image, index) => (
+                    <button
+                      key={`${image}-${index}`}
+                      type="button"
+                      onClick={() =>
+                        setSelectedPreviewImage(index)
+                      }
+                      className={`overflow-hidden border-2 bg-gray-100 ${
+                        selectedPreviewImage === index
+                          ? "border-black"
+                          : "border-transparent"
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`Preview ${index + 1}`}
+                        className="aspect-square w-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <p className="mt-5 text-sm font-bold uppercase text-gray-500">
                 {productType === "tshirt"
