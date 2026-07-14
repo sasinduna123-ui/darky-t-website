@@ -2,6 +2,15 @@
 
 import { useState } from "react";
 
+type CartItem = {
+  id: string;
+  name: string;
+  image: string;
+  size: string;
+  price: number;
+  quantity: number;
+};
+
 export default function ProductPage() {
   const [selectedSize, setSelectedSize] = useState("M");
   const [quantity, setQuantity] = useState(1);
@@ -10,10 +19,10 @@ export default function ProductPage() {
   const whatsappNumber = "94788809678";
 
   const stockBySize: Record<string, number> = {
-    XS: 5,
-    S: 10,
-    M: 10,
-    L: 10,
+    XS: 2,
+    S: 4,
+    M: 6,
+    L: 3,
     XL: 1,
     XXL: 0,
   };
@@ -33,22 +42,67 @@ Quantity: ${quantity}
 Total: Rs. ${total.toLocaleString()}`
   );
 
+  function addToCart() {
+    if (isOutOfStock) return;
+
+    const newItem: CartItem = {
+      id: "black-tee",
+      name: "Essential Black Tee",
+      image: "/images/TSHIRT1.jpg",
+      size: selectedSize,
+      price,
+      quantity,
+    };
+
+    try {
+      const savedCart = localStorage.getItem("darky-cart");
+      const cart: CartItem[] = savedCart ? JSON.parse(savedCart) : [];
+
+      const existingIndex = cart.findIndex(
+        (item) => item.id === newItem.id && item.size === newItem.size
+      );
+
+      if (existingIndex >= 0) {
+        cart[existingIndex].quantity = Math.min(
+          selectedStock,
+          cart[existingIndex].quantity + quantity
+        );
+      } else {
+        cart.push(newItem);
+      }
+
+      localStorage.setItem("darky-cart", JSON.stringify(cart));
+      alert("Product added to cart!");
+    } catch {
+      alert("Could not add product to cart.");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-white text-black">
-      {/* Navbar */}
       <nav className="flex items-center justify-between border-b px-6 py-5 md:px-12">
         <a href="/" className="text-2xl font-black tracking-[0.3em]">
           DARKY T
         </a>
 
-        <a href="/" className="text-sm font-semibold hover:text-gray-500">
-          BACK TO HOME
-        </a>
+        <div className="flex items-center gap-5">
+          <a
+            href="/cart"
+            className="text-sm font-semibold hover:text-gray-500"
+          >
+            CART
+          </a>
+
+          <a
+            href="/"
+            className="text-sm font-semibold hover:text-gray-500"
+          >
+            BACK TO HOME
+          </a>
+        </div>
       </nav>
 
-      {/* Product Section */}
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-12 md:grid-cols-2 md:px-12">
-        {/* Product Image */}
         <div className="overflow-hidden bg-gray-100">
           <img
             src="/images/TSHIRT1.jpg"
@@ -57,7 +111,6 @@ Total: Rs. ${total.toLocaleString()}`
           />
         </div>
 
-        {/* Product Details */}
         <div className="flex flex-col justify-center">
           <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
             DARKY T COLLECTION
@@ -74,7 +127,6 @@ Total: Rs. ${total.toLocaleString()}`
             Designed for comfort, durability and a bold streetwear look.
           </p>
 
-          {/* Size Selection */}
           <div className="mt-8">
             <p className="mb-3 font-bold">SELECT SIZE</p>
 
@@ -116,7 +168,6 @@ Total: Rs. ${total.toLocaleString()}`
             </p>
           </div>
 
-          {/* Quantity */}
           <div className="mt-8">
             <p className="mb-3 font-bold">QUANTITY</p>
 
@@ -152,7 +203,6 @@ Total: Rs. ${total.toLocaleString()}`
             </div>
           </div>
 
-          {/* Total */}
           <div className="mt-8 flex justify-between border-y py-5">
             <span className="font-bold">TOTAL</span>
 
@@ -161,21 +211,31 @@ Total: Rs. ${total.toLocaleString()}`
             </span>
           </div>
 
-          {/* WhatsApp Order Button */}
+          <button
+            onClick={addToCart}
+            disabled={isOutOfStock}
+            className={`mt-8 w-full px-8 py-4 text-center font-bold transition ${
+              isOutOfStock
+                ? "cursor-not-allowed bg-gray-300 text-gray-500"
+                : "bg-black text-white hover:bg-gray-800"
+            }`}
+          >
+            {isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}
+          </button>
+
           <a
             href={`https://wa.me/${whatsappNumber}?text=${orderMessage}`}
             target="_blank"
             rel="noopener noreferrer"
-            className={`mt-8 px-8 py-4 text-center font-bold text-white transition ${
+            className={`mt-4 px-8 py-4 text-center font-bold text-white transition ${
               isOutOfStock
                 ? "pointer-events-none bg-gray-400"
-                : "bg-black hover:bg-gray-800"
+                : "bg-green-600 hover:bg-green-700"
             }`}
           >
             {isOutOfStock ? "OUT OF STOCK" : "ORDER ON WHATSAPP"}
           </a>
 
-          {/* Product Features */}
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
             <p>✓ 240 GSM heavy cotton</p>
             <p>✓ Premium oversized fit</p>
