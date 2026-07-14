@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FaWhatsapp } from "react-icons/fa";
 
 type CartItem = {
   id: string;
@@ -16,7 +17,6 @@ export default function GreyProductPage() {
   const [quantity, setQuantity] = useState(1);
 
   const price = 3650;
-  const whatsappNumber = "94788809678";
 
   const stockBySize: Record<string, number> = {
     XS: 2,
@@ -30,17 +30,6 @@ export default function GreyProductPage() {
   const selectedStock = stockBySize[selectedSize];
   const isOutOfStock = selectedStock === 0;
   const total = price * quantity;
-
-  const orderMessage = encodeURIComponent(
-    `Hello DARKY T,
-
-I want to order:
-
-Product: Dark Grey Oversized Tee
-Size: ${selectedSize}
-Quantity: ${quantity}
-Total: Rs. ${total.toLocaleString()}`
-  );
 
   function addToCart() {
     if (isOutOfStock) return;
@@ -56,10 +45,14 @@ Total: Rs. ${total.toLocaleString()}`
 
     try {
       const savedCart = localStorage.getItem("darky-cart");
-      const cart: CartItem[] = savedCart ? JSON.parse(savedCart) : [];
+      const cart: CartItem[] = savedCart
+        ? JSON.parse(savedCart)
+        : [];
 
       const existingIndex = cart.findIndex(
-        (item) => item.id === newItem.id && item.size === newItem.size
+        (item) =>
+          item.id === newItem.id &&
+          item.size === newItem.size
       );
 
       if (existingIndex >= 0) {
@@ -71,26 +64,63 @@ Total: Rs. ${total.toLocaleString()}`
         cart.push(newItem);
       }
 
-      localStorage.setItem("darky-cart", JSON.stringify(cart));
+      localStorage.setItem(
+        "darky-cart",
+        JSON.stringify(cart)
+      );
+
       alert("Product added to cart!");
     } catch {
       alert("Could not add product to cart.");
     }
   }
 
+  function directOrder() {
+    if (isOutOfStock) return;
+
+    const directOrderItem: CartItem = {
+      id: "grey-tee",
+      name: "Dark Grey Oversized Tee",
+      image: "/images/TSHIRT3.jpg",
+      size: selectedSize,
+      price,
+      quantity,
+    };
+
+    try {
+      localStorage.setItem(
+        "darky-direct-order",
+        JSON.stringify(directOrderItem)
+      );
+
+      window.location.href = "/direct-order";
+    } catch {
+      alert("Could not continue to delivery details.");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-white text-black">
-      <nav className="flex items-center justify-between border-b px-6 py-5 md:px-12">
-        <a href="/" className="text-2xl font-black tracking-[0.3em]">
+      <nav className="flex items-center justify-between border-b px-4 py-5 sm:px-6 md:px-12">
+        <a
+          href="/"
+          className="text-xl font-black tracking-[0.2em] sm:text-2xl sm:tracking-[0.3em]"
+        >
           DARKY T
         </a>
 
-        <div className="flex items-center gap-5">
-          <a href="/cart" className="text-sm font-semibold hover:text-gray-500">
+        <div className="flex items-center gap-4 sm:gap-5">
+          <a
+            href="/cart"
+            className="text-xs font-semibold hover:text-gray-500 sm:text-sm"
+          >
             CART
           </a>
 
-          <a href="/" className="text-sm font-semibold hover:text-gray-500">
+          <a
+            href="/"
+            className="whitespace-nowrap text-xs font-semibold hover:text-gray-500 sm:text-sm"
+          >
             BACK TO HOME
           </a>
         </div>
@@ -114,46 +144,55 @@ Total: Rs. ${total.toLocaleString()}`
             DARK GREY OVERSIZED TEE
           </h1>
 
-          <p className="mt-4 text-2xl font-bold">Rs. 3,650</p>
+          <p className="mt-4 text-2xl font-bold">
+            Rs. 3,650
+          </p>
 
           <p className="mt-6 leading-7 text-gray-600">
-            Premium oversized dark grey T-shirt made with 240 GSM heavy cotton.
-            Designed for comfort, durability and a bold streetwear look.
+            Premium oversized dark grey T-shirt made with 240 GSM heavy
+            cotton. Designed for comfort, durability and a bold streetwear
+            look.
           </p>
 
           <div className="mt-8">
-            <p className="mb-3 font-bold">SELECT SIZE</p>
+            <p className="mb-3 font-bold">
+              SELECT SIZE
+            </p>
 
             <div className="flex flex-wrap gap-3">
-              {["XS", "S", "M", "L", "XL", "XXL"].map((size) => {
-                const stock = stockBySize[size];
-                const soldOut = stock === 0;
+              {["XS", "S", "M", "L", "XL", "XXL"].map(
+                (size) => {
+                  const stock = stockBySize[size];
+                  const soldOut = stock === 0;
 
-                return (
-                  <button
-                    key={size}
-                    disabled={soldOut}
-                    onClick={() => {
-                      setSelectedSize(size);
-                      setQuantity(1);
-                    }}
-                    className={`min-w-14 border px-3 py-3 font-bold transition ${
-                      soldOut
-                        ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through"
-                        : selectedSize === size
-                          ? "border-black bg-black text-white"
-                          : "border-gray-300 hover:border-black"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={size}
+                      disabled={soldOut}
+                      onClick={() => {
+                        setSelectedSize(size);
+                        setQuantity(1);
+                      }}
+                      className={`min-w-14 border px-3 py-3 font-bold transition ${
+                        soldOut
+                          ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through"
+                          : selectedSize === size
+                            ? "border-black bg-black text-white"
+                            : "border-gray-300 hover:border-black"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  );
+                }
+              )}
             </div>
 
             <p
               className={`mt-3 text-sm font-semibold ${
-                isOutOfStock ? "text-red-600" : "text-green-600"
+                isOutOfStock
+                  ? "text-red-600"
+                  : "text-green-600"
               }`}
             >
               {isOutOfStock
@@ -163,12 +202,16 @@ Total: Rs. ${total.toLocaleString()}`
           </div>
 
           <div className="mt-8">
-            <p className="mb-3 font-bold">QUANTITY</p>
+            <p className="mb-3 font-bold">
+              QUANTITY
+            </p>
 
             <div className="flex w-fit items-center border border-gray-300">
               <button
                 onClick={() =>
-                  setQuantity((current) => Math.max(1, current - 1))
+                  setQuantity((current) =>
+                    Math.max(1, current - 1)
+                  )
                 }
                 className="h-12 w-12 text-xl hover:bg-gray-100"
               >
@@ -182,7 +225,10 @@ Total: Rs. ${total.toLocaleString()}`
               <button
                 onClick={() =>
                   setQuantity((current) =>
-                    Math.min(selectedStock, current + 1)
+                    Math.min(
+                      selectedStock,
+                      current + 1
+                    )
                   )
                 }
                 disabled={quantity >= selectedStock}
@@ -198,7 +244,9 @@ Total: Rs. ${total.toLocaleString()}`
           </div>
 
           <div className="mt-8 flex justify-between border-y py-5">
-            <span className="font-bold">TOTAL</span>
+            <span className="font-bold">
+              TOTAL
+            </span>
 
             <span className="text-xl font-black">
               Rs. {total.toLocaleString()}
@@ -214,21 +262,30 @@ Total: Rs. ${total.toLocaleString()}`
                 : "bg-black text-white hover:bg-gray-800"
             }`}
           >
-            {isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}
+            {isOutOfStock
+              ? "OUT OF STOCK"
+              : "ADD TO CART"}
           </button>
 
-          <a
-            href={`https://wa.me/${whatsappNumber}?text=${orderMessage}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`mt-4 px-8 py-4 text-center font-bold text-white transition ${
+          <button
+            onClick={directOrder}
+            disabled={isOutOfStock}
+            className={`mt-4 flex w-full items-center justify-center gap-3 px-8 py-4 text-center font-bold text-white transition ${
               isOutOfStock
-                ? "pointer-events-none bg-gray-400"
+                ? "cursor-not-allowed bg-gray-400"
                 : "bg-green-600 hover:bg-green-700"
             }`}
           >
-            {isOutOfStock ? "OUT OF STOCK" : "ORDER ON WHATSAPP"}
-          </a>
+            {!isOutOfStock && (
+              <FaWhatsapp className="text-2xl" />
+            )}
+
+            <span>
+              {isOutOfStock
+                ? "OUT OF STOCK"
+                : "ORDER WITH DELIVERY DETAILS"}
+            </span>
+          </button>
 
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
             <p>✓ 240 GSM heavy cotton</p>
