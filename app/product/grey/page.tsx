@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
+import CartCount from "@/app/components/CartCount";
+import SizeGuide from "@/app/components/SizeGuide";
 
 type CartItem = {
   id: string;
@@ -45,6 +47,7 @@ export default function GreyProductPage() {
 
     try {
       const savedCart = localStorage.getItem("darky-cart");
+
       const cart: CartItem[] = savedCart
         ? JSON.parse(savedCart)
         : [];
@@ -67,6 +70,10 @@ export default function GreyProductPage() {
       localStorage.setItem(
         "darky-cart",
         JSON.stringify(cart)
+      );
+
+      window.dispatchEvent(
+        new Event("darky-cart-updated")
       );
 
       alert("Product added to cart!");
@@ -101,6 +108,7 @@ export default function GreyProductPage() {
 
   return (
     <main className="min-h-screen bg-white text-black">
+      {/* Navbar */}
       <nav className="flex items-center justify-between border-b px-4 py-5 sm:px-6 md:px-12">
         <a
           href="/"
@@ -110,12 +118,7 @@ export default function GreyProductPage() {
         </a>
 
         <div className="flex items-center gap-4 sm:gap-5">
-          <a
-            href="/cart"
-            className="text-xs font-semibold hover:text-gray-500 sm:text-sm"
-          >
-            CART
-          </a>
+          <CartCount />
 
           <a
             href="/"
@@ -126,7 +129,9 @@ export default function GreyProductPage() {
         </div>
       </nav>
 
+      {/* Product Section */}
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-12 md:grid-cols-2 md:px-12">
+        {/* Product Image */}
         <div className="overflow-hidden bg-gray-100">
           <img
             src="/images/TSHIRT3.jpg"
@@ -135,6 +140,7 @@ export default function GreyProductPage() {
           />
         </div>
 
+        {/* Product Details */}
         <div className="flex flex-col justify-center">
           <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
             DARKY T COLLECTION
@@ -149,15 +155,20 @@ export default function GreyProductPage() {
           </p>
 
           <p className="mt-6 leading-7 text-gray-600">
-            Premium oversized dark grey T-shirt made with 240 GSM heavy
-            cotton. Designed for comfort, durability and a bold streetwear
-            look.
+            Premium oversized dark grey T-shirt made with
+            240 GSM heavy cotton. Designed for comfort,
+            durability and a bold streetwear look.
           </p>
 
+          {/* Size Selection */}
           <div className="mt-8">
-            <p className="mb-3 font-bold">
-              SELECT SIZE
-            </p>
+            <div className="mb-3 flex items-center justify-between gap-4">
+              <p className="font-bold">
+                SELECT SIZE
+              </p>
+
+              <SizeGuide />
+            </div>
 
             <div className="flex flex-wrap gap-3">
               {["XS", "S", "M", "L", "XL", "XXL"].map(
@@ -201,6 +212,7 @@ export default function GreyProductPage() {
             </p>
           </div>
 
+          {/* Quantity */}
           <div className="mt-8">
             <p className="mb-3 font-bold">
               QUANTITY
@@ -243,6 +255,7 @@ export default function GreyProductPage() {
             </div>
           </div>
 
+          {/* Total */}
           <div className="mt-8 flex justify-between border-y py-5">
             <span className="font-bold">
               TOTAL
@@ -253,6 +266,7 @@ export default function GreyProductPage() {
             </span>
           </div>
 
+          {/* Add To Cart */}
           <button
             onClick={addToCart}
             disabled={isOutOfStock}
@@ -267,6 +281,7 @@ export default function GreyProductPage() {
               : "ADD TO CART"}
           </button>
 
+          {/* Direct Order */}
           <button
             onClick={directOrder}
             disabled={isOutOfStock}
@@ -287,6 +302,7 @@ export default function GreyProductPage() {
             </span>
           </button>
 
+          {/* Features */}
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
             <p>✓ 240 GSM heavy cotton</p>
             <p>✓ Premium oversized fit</p>
