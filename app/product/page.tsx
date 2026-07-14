@@ -16,7 +16,6 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1);
 
   const price = 3650;
-  const whatsappNumber = "94788809678";
 
   const stockBySize: Record<string, number> = {
     XS: 2,
@@ -30,17 +29,6 @@ export default function ProductPage() {
   const selectedStock = stockBySize[selectedSize];
   const isOutOfStock = selectedStock === 0;
   const total = price * quantity;
-
-  const orderMessage = encodeURIComponent(
-    `Hello DARKY T,
-
-I want to order:
-
-Product: Essential Black Tee
-Size: ${selectedSize}
-Quantity: ${quantity}
-Total: Rs. ${total.toLocaleString()}`
-  );
 
   function addToCart() {
     if (isOutOfStock) return;
@@ -60,7 +48,8 @@ Total: Rs. ${total.toLocaleString()}`
 
       const existingIndex = cart.findIndex(
         (item) =>
-          item.id === newItem.id && item.size === newItem.size
+          item.id === newItem.id &&
+          item.size === newItem.size
       );
 
       if (existingIndex >= 0) {
@@ -79,28 +68,52 @@ Total: Rs. ${total.toLocaleString()}`
     }
   }
 
+  function directOrder() {
+    if (isOutOfStock) return;
+
+    const directOrderItem: CartItem = {
+      id: "black-tee",
+      name: "Essential Black Tee",
+      image: "/images/TSHIRT1.jpg",
+      size: selectedSize,
+      price,
+      quantity,
+    };
+
+    try {
+      localStorage.setItem(
+        "darky-direct-order",
+        JSON.stringify(directOrderItem)
+      );
+
+      window.location.href = "/direct-order";
+    } catch {
+      alert("Could not continue to delivery details.");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-white text-black">
       {/* Navbar */}
-      <nav className="flex items-center justify-between border-b px-6 py-5 md:px-12">
+      <nav className="flex items-center justify-between border-b px-4 py-5 sm:px-6 md:px-12">
         <a
           href="/"
-          className="text-2xl font-black tracking-[0.3em]"
+          className="text-xl font-black tracking-[0.2em] sm:text-2xl sm:tracking-[0.3em]"
         >
           DARKY T
         </a>
 
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-4 sm:gap-5">
           <a
             href="/cart"
-            className="text-sm font-semibold hover:text-gray-500"
+            className="text-xs font-semibold hover:text-gray-500 sm:text-sm"
           >
             CART
           </a>
 
           <a
             href="/"
-            className="text-sm font-semibold hover:text-gray-500"
+            className="whitespace-nowrap text-xs font-semibold hover:text-gray-500 sm:text-sm"
           >
             BACK TO HOME
           </a>
@@ -190,7 +203,9 @@ Total: Rs. ${total.toLocaleString()}`
             <div className="flex w-fit items-center border border-gray-300">
               <button
                 onClick={() =>
-                  setQuantity((current) => Math.max(1, current - 1))
+                  setQuantity((current) =>
+                    Math.max(1, current - 1)
+                  )
                 }
                 className="h-12 w-12 text-xl hover:bg-gray-100"
               >
@@ -243,19 +258,22 @@ Total: Rs. ${total.toLocaleString()}`
             {isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}
           </button>
 
-          {/* WhatsApp Order */}
-          <a
-            href={`https://wa.me/${whatsappNumber}?text=${orderMessage}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`mt-4 px-8 py-4 text-center font-bold text-white transition ${
+          {/* Direct Order */}
+          <button
+            onClick={directOrder}
+            disabled={isOutOfStock}
+            className={`mt-4 w-full px-8 py-4 text-center font-bold text-white transition ${
               isOutOfStock
-                ? "pointer-events-none bg-gray-400"
+                ? "cursor-not-allowed bg-gray-400"
                 : "bg-green-600 hover:bg-green-700"
             }`}
           >
-            {isOutOfStock ? "OUT OF STOCK" : "ORDER ON WHATSAPP"}
-          </a>
+            {isOutOfStock
+              ? "OUT OF STOCK"
+              : "ORDER WITH DELIVERY DETAILS"}
+          </button>
+
+          
 
           {/* Product Features */}
           <div className="mt-8 space-y-3 border-t pt-6 text-sm text-gray-600">
