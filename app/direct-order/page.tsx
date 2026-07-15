@@ -214,7 +214,7 @@ export default function DirectOrderPage() {
 
     if (!alternativePhone.trim()) {
       setErrorMessage(
-        "Alternative phone number එකත් අනිවාර්යයෙන් ඇතුළත් කරන්න."
+        "Alternative phone number එක ඇතුළත් කරන්න."
       );
       return false;
     }
@@ -271,51 +271,48 @@ export default function DirectOrderPage() {
         alternativePhone
       );
 
-    const deliveryMessage =
+    const deliveryDetails =
       hasFixedDeliveryFee
-        ? `🚚 Delivery Fee: Rs. ${deliveryFee.toLocaleString()}
-💳 Final Total: Rs. ${finalTotal.toLocaleString()}`
-        : `🚚 Delivery Fee: Please confirm through WhatsApp chat
-💳 Final Total: Will be confirmed after delivery fee is calculated`;
+        ? `• Delivery Fee: Rs. ${deliveryFee.toLocaleString()}
+• *Final Total: Rs. ${finalTotal.toLocaleString()}*`
+        : `• Delivery Fee: _To be confirmed through WhatsApp_
+• Final Total: _To be confirmed after calculating the delivery fee_`;
 
-    const whatsappMessage = `🖤 *DARKY T - NEW ORDER* 🖤
+    const whatsappMessage = `*DARKY T - NEW ORDER*
 
-Hello DARKY T 👋
-I would like to place an order.
+Hello DARKY T,
 
-━━━━━━━━━━━━━━━━━━
-🛍️ *ORDER DETAILS*
-━━━━━━━━━━━━━━━━━━
+I would like to place the following order.
 
-👕 Product: ${currentOrderItem.name}
-🎨 Colour: ${selectedColour}
-📏 Size: ${currentOrderItem.size}
-🔢 Quantity: ${currentOrderItem.quantity}
-💵 Unit Price: Rs. ${currentOrderItem.price.toLocaleString()}
-🧾 Subtotal: Rs. ${subtotal.toLocaleString()}
-${deliveryMessage}
+--------------------------------
+*ORDER DETAILS*
+--------------------------------
 
-━━━━━━━━━━━━━━━━━━
-👤 *CUSTOMER DETAILS*
-━━━━━━━━━━━━━━━━━━
+• Product: *${currentOrderItem.name}*
+• Colour: ${selectedColour}
+• Size: ${currentOrderItem.size}
+• Quantity: ${currentOrderItem.quantity}
+• Unit Price: Rs. ${currentOrderItem.price.toLocaleString()}
+• Subtotal: Rs. ${subtotal.toLocaleString()}
+${deliveryDetails}
 
-🙍 Name: ${customerName.trim()}
-📞 Primary Phone: ${formattedPrimaryPhone}
-☎️ Alternative Phone: ${formattedAlternativePhone}
-📍 District: ${district.trim()}
-🏠 Delivery Address: ${address.trim()}
-📝 Note: ${note.trim() || "No special note"}
+--------------------------------
+*CUSTOMER DETAILS*
+--------------------------------
 
-━━━━━━━━━━━━━━━━━━
-💳 *PAYMENT RECEIPT*
-━━━━━━━━━━━━━━━━━━
+• Name: ${customerName.trim()}
+• Primary Phone: ${formattedPrimaryPhone}
+• Alternative Phone: ${formattedAlternativePhone}
+• District: ${district.trim()}
+• Delivery Address: ${address.trim()}
+• Note: ${note.trim() || "No special note"}
 
-📎 Payment එක කරලා receipt එකේ photo එකක් හෝ PDF එකක් මේ WhatsApp chat එකට එවන්න.
+--------------------------------
 
-━━━━━━━━━━━━━━━━━━
+*Please confirm my order.*
 
-✅ Please confirm my order.
-Thank you! 🖤`;
+Thank you,
+*DARKY T*`;
 
     const whatsappNumber =
       "94788809678";
@@ -631,9 +628,7 @@ Thank you! 🖤`;
                 <textarea
                   value={note}
                   onChange={(event) =>
-                    setNote(
-                      event.target.value
-                    )
+                    setNote(event.target.value)
                   }
                   rows={3}
                   placeholder="Order එක ගැන විශේෂ සටහනක් තිබේ නම්"
@@ -658,8 +653,8 @@ Thank you! 🖤`;
 
               <p className="text-center text-xs leading-5 text-gray-500">
                 Product, colour, size, delivery
-                fee සහ phone numbers දෙකම WhatsApp
-                message එකට automatically යනවා.
+                fee සහ customer details WhatsApp
+                message එකට යනවා.
               </p>
             </div>
           </form>
