@@ -1,7 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { products } from "@/app/data/products";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  products,
+  Product,
+} from "@/app/data/products";
 
 type CartItem = {
   id: string;
@@ -12,25 +20,127 @@ type CartItem = {
   quantity: number;
 };
 
+type ProductFilter =
+  | "all"
+  | "tshirt"
+  | "pants";
+
+type StockFilter =
+  | "all"
+  | "in-stock"
+  | "sold-out";
+
+type SortOption =
+  | "default"
+  | "price-low"
+  | "price-high"
+  | "name-az";
+
+function getTotalProductStock(
+  product: Product
+): number {
+  return product.variants.reduce(
+    (productTotal, variant) => {
+      const variantStock =
+        Object.values(
+          variant.stock
+        ).reduce(
+          (
+            total,
+            stockAmount
+          ) =>
+            total +
+            Number(stockAmount || 0),
+          0
+        );
+
+      return (
+        productTotal +
+        variantStock
+      );
+    },
+    0
+  );
+}
+
+function getAvailableColours(
+  product: Product
+): number {
+  return product.variants.filter(
+    (variant) => {
+      const totalVariantStock =
+        Object.values(
+          variant.stock
+        ).reduce(
+          (
+            total,
+            stockAmount
+          ) =>
+            total +
+            Number(stockAmount || 0),
+          0
+        );
+
+      return totalVariantStock > 0;
+    }
+  ).length;
+}
+
 export default function Home() {
-  const [cartCount, setCartCount] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [cartCount, setCartCount] =
+    useState(0);
+
+  const [menuOpen, setMenuOpen] =
+    useState(false);
+
+  const [searchText, setSearchText] =
+    useState("");
+
+  const [
+    productFilter,
+    setProductFilter,
+  ] = useState<ProductFilter>("all");
+
+  const [stockFilter, setStockFilter] =
+    useState<StockFilter>("all");
+
+  const [sortOption, setSortOption] =
+    useState<SortOption>("default");
 
   function updateCartCount() {
     try {
-      const savedCart = localStorage.getItem("darky-cart");
+      const savedCart =
+        localStorage.getItem(
+          "darky-cart"
+        );
 
       if (!savedCart) {
         setCartCount(0);
         return;
       }
 
-      const cart: CartItem[] = JSON.parse(savedCart);
+      const parsedCart =
+        JSON.parse(savedCart);
 
-      const totalItems = cart.reduce(
-        (total, item) => total + item.quantity,
-        0
-      );
+      if (
+        !Array.isArray(parsedCart)
+      ) {
+        setCartCount(0);
+        return;
+      }
+
+      const cart: CartItem[] =
+        parsedCart;
+
+      const totalItems =
+        cart.reduce(
+          (total, item) =>
+            total +
+            Number(
+              item.quantity || 0
+            ),
+          0
+        );
 
       setCartCount(totalItems);
     } catch {
@@ -41,8 +151,16 @@ export default function Home() {
   useEffect(() => {
     updateCartCount();
 
-    window.addEventListener("focus", updateCartCount);
-    window.addEventListener("storage", updateCartCount);
+    window.addEventListener(
+      "focus",
+      updateCartCount
+    );
+
+    window.addEventListener(
+      "storage",
+      updateCartCount
+    );
+
     window.addEventListener(
       "darky-cart-updated",
       updateCartCount
@@ -69,6 +187,127 @@ export default function Home() {
   function closeMenu() {
     setMenuOpen(false);
   }
+
+  function clearFilters() {
+    setSearchText("");
+    setProductFilter("all");
+    setStockFilter("all");
+    setSortOption("default");
+  }
+
+  const filteredProducts =
+    useMemo(() => {
+      const cleanSearch =
+        searchText
+          .trim()
+          .toLowerCase();
+
+      const filtered =
+        products.filter(
+          (product) => {
+            const totalStock =
+              getTotalProductStock(
+                product
+              );
+
+            const matchesSearch =
+              !cleanSearch ||
+              product.name
+                .toLowerCase()
+                .includes(
+                  cleanSearch
+                ) ||
+              product.shortName
+                .toLowerCase()
+                .includes(
+                  cleanSearch
+                ) ||
+              product.description
+                .toLowerCase()
+                .includes(
+                  cleanSearch
+                ) ||
+              product.variants.some(
+                (variant) =>
+                  variant.name
+                    .toLowerCase()
+                    .includes(
+                      cleanSearch
+                    )
+              );
+
+            const matchesType =
+              productFilter ===
+                "all" ||
+              product.productType ===
+                productFilter;
+
+            const matchesStock =
+              stockFilter ===
+                "all" ||
+              (stockFilter ===
+                "in-stock" &&
+                totalStock > 0) ||
+              (stockFilter ===
+                "sold-out" &&
+                totalStock === 0);
+
+            return (
+              matchesSearch &&
+              matchesType &&
+              matchesStock
+            );
+          }
+        );
+
+      return [...filtered].sort(
+        (firstProduct, secondProduct) => {
+          if (
+            sortOption ===
+            "price-low"
+          ) {
+            return (
+              firstProduct.price -
+              secondProduct.price
+            );
+          }
+
+          if (
+            sortOption ===
+            "price-high"
+          ) {
+            return (
+              secondProduct.price -
+              firstProduct.price
+            );
+          }
+
+          if (
+            sortOption ===
+            "name-az"
+          ) {
+            return firstProduct.name.localeCompare(
+              secondProduct.name
+            );
+          }
+
+          return 0;
+        }
+      );
+    }, [
+      searchText,
+      productFilter,
+      stockFilter,
+      sortOption,
+    ]);
+
+  const activeFilterCount =
+    [
+      searchText.trim() !== "",
+      productFilter !== "all",
+      stockFilter !== "all",
+      sortOption !== "default",
+    ].filter(Boolean).length;
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -132,9 +371,18 @@ export default function Home() {
             {/* Mobile Menu Button */}
             <button
               type="button"
-              onClick={() => setMenuOpen(!menuOpen)}
+              onClick={() =>
+                setMenuOpen(
+                  (current) =>
+                    !current
+                )
+              }
               className="flex h-10 w-10 items-center justify-center border border-white/30 text-2xl lg:hidden"
-              aria-label="Open menu"
+              aria-label={
+                menuOpen
+                  ? "Close menu"
+                  : "Open menu"
+              }
             >
               {menuOpen ? "×" : "☰"}
             </button>
@@ -208,7 +456,7 @@ export default function Home() {
             <br />
             OVERSIZED
             <br />
-            T-SHIRTS
+            STREETWEAR
           </h1>
 
           <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-gray-300 sm:text-lg">
@@ -238,50 +486,418 @@ export default function Home() {
       {/* Products Section */}
       <section
         id="shop"
-        className="bg-white px-6 py-20 text-black md:px-12"
+        className="bg-white px-5 py-20 text-black sm:px-6 md:px-12"
       >
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
             NEW COLLECTION
           </p>
 
-          <h2 className="mt-3 text-4xl font-black md:text-5xl">
-            BEST SELLERS
-          </h2>
+          <div className="mt-3 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div>
+              <h2 className="text-4xl font-black md:text-5xl">
+                SHOP PRODUCTS
+              </h2>
 
-          <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
-              <div key={product.id}>
-                <a
-                  href={`/product/${product.slug}`}
-                  className="block overflow-hidden bg-gray-100"
-                >
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="aspect-square w-full object-cover transition duration-300 hover:scale-105"
+              <p className="mt-3 text-gray-600">
+                Search, filter and find your style.
+              </p>
+            </div>
+
+            <div className="text-sm font-bold text-gray-500">
+              {filteredProducts.length}{" "}
+              {filteredProducts.length ===
+              1
+                ? "PRODUCT"
+                : "PRODUCTS"}{" "}
+              FOUND
+            </div>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="mt-10 border border-gray-200 bg-gray-50 p-5 md:p-7">
+            <div className="grid gap-5 lg:grid-cols-[1.4fr_0.8fr_0.8fr]">
+              {/* Search */}
+              <div>
+                <label className="mb-2 block text-xs font-black tracking-[0.18em] text-gray-500">
+                  SEARCH PRODUCTS
+                </label>
+
+                <div className="relative">
+                  <input
+                    type="search"
+                    value={searchText}
+                    onChange={(event) =>
+                      setSearchText(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Search product or colour..."
+                    className="w-full border border-gray-300 bg-white px-4 py-4 pr-12 outline-none transition focus:border-black"
                   />
-                </a>
 
-                <a href={`/product/${product.slug}`}>
-                  <h3 className="mt-5 text-xl font-black hover:underline">
-                    {product.name}
-                  </h3>
-                </a>
+                  {searchText && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSearchText("")
+                      }
+                      aria-label="Clear search"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-xl font-black text-gray-400 hover:text-black"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
 
-                <p className="mt-2 text-lg font-semibold text-gray-700">
-                  Rs. {product.price.toLocaleString()}
+              {/* Stock Filter */}
+              <div>
+                <label className="mb-2 block text-xs font-black tracking-[0.18em] text-gray-500">
+                  STOCK
+                </label>
+
+                <select
+                  value={stockFilter}
+                  onChange={(event) =>
+                    setStockFilter(
+                      event.target
+                        .value as StockFilter
+                    )
+                  }
+                  className="w-full border border-gray-300 bg-white px-4 py-4 outline-none transition focus:border-black"
+                >
+                  <option value="all">
+                    ALL PRODUCTS
+                  </option>
+
+                  <option value="in-stock">
+                    IN STOCK
+                  </option>
+
+                  <option value="sold-out">
+                    SOLD OUT
+                  </option>
+                </select>
+              </div>
+
+              {/* Sort */}
+              <div>
+                <label className="mb-2 block text-xs font-black tracking-[0.18em] text-gray-500">
+                  SORT BY
+                </label>
+
+                <select
+                  value={sortOption}
+                  onChange={(event) =>
+                    setSortOption(
+                      event.target
+                        .value as SortOption
+                    )
+                  }
+                  className="w-full border border-gray-300 bg-white px-4 py-4 outline-none transition focus:border-black"
+                >
+                  <option value="default">
+                    DEFAULT
+                  </option>
+
+                  <option value="price-low">
+                    PRICE: LOW TO HIGH
+                  </option>
+
+                  <option value="price-high">
+                    PRICE: HIGH TO LOW
+                  </option>
+
+                  <option value="name-az">
+                    NAME: A TO Z
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            {/* Product Type Filter */}
+            <div className="mt-6">
+              <p className="mb-3 text-xs font-black tracking-[0.18em] text-gray-500">
+                PRODUCT TYPE
+              </p>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setProductFilter(
+                      "all"
+                    )
+                  }
+                  className={`border px-5 py-3 text-sm font-black transition ${
+                    productFilter ===
+                    "all"
+                      ? "border-black bg-black text-white"
+                      : "border-gray-300 bg-white text-black hover:border-black"
+                  }`}
+                >
+                  ALL
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setProductFilter(
+                      "tshirt"
+                    )
+                  }
+                  className={`border px-5 py-3 text-sm font-black transition ${
+                    productFilter ===
+                    "tshirt"
+                      ? "border-black bg-black text-white"
+                      : "border-gray-300 bg-white text-black hover:border-black"
+                  }`}
+                >
+                  T-SHIRTS
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setProductFilter(
+                      "pants"
+                    )
+                  }
+                  className={`border px-5 py-3 text-sm font-black transition ${
+                    productFilter ===
+                    "pants"
+                      ? "border-black bg-black text-white"
+                      : "border-gray-300 bg-white text-black hover:border-black"
+                  }`}
+                >
+                  PANTS
+                </button>
+              </div>
+            </div>
+
+            {/* Active Filter Summary */}
+            {activeFilterCount > 0 && (
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-5">
+                <p className="text-sm font-bold text-gray-600">
+                  {activeFilterCount} active{" "}
+                  {activeFilterCount ===
+                  1
+                    ? "filter"
+                    : "filters"}
                 </p>
 
-                <a
-                  href={`/product/${product.slug}`}
-                  className="mt-4 block w-full bg-black px-5 py-3 text-center font-black text-white transition hover:bg-gray-800"
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-sm font-black underline underline-offset-4 hover:text-gray-500"
                 >
-                  VIEW PRODUCT
-                </a>
+                  CLEAR ALL FILTERS
+                </button>
               </div>
-            ))}
+            )}
           </div>
+
+          {/* Product Grid */}
+          {filteredProducts.length >
+          0 ? (
+            <div className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredProducts.map(
+                (product) => {
+                  const totalStock =
+                    getTotalProductStock(
+                      product
+                    );
+
+                  const isSoldOut =
+                    totalStock <= 0;
+
+                  const availableColours =
+                    getAvailableColours(
+                      product
+                    );
+
+                  const isLowStock =
+                    totalStock > 0 &&
+                    totalStock <= 5;
+
+                  return (
+                    <article
+                      key={product.id}
+                      className="group"
+                    >
+                      <a
+                        href={`/product/${product.slug}`}
+                        className="relative block overflow-hidden bg-gray-100"
+                      >
+                        <img
+                          src={
+                            product.image
+                          }
+                          alt={
+                            product.name
+                          }
+                          className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105"
+                        />
+
+                        <div className="absolute left-3 top-3 flex flex-col items-start gap-2">
+                          <span className="bg-black px-3 py-2 text-[10px] font-black tracking-[0.15em] text-white">
+                            {product.productType ===
+                            "tshirt"
+                              ? "T-SHIRT"
+                              : "PANTS"}
+                          </span>
+
+                          {isSoldOut && (
+                            <span className="bg-red-600 px-3 py-2 text-[10px] font-black tracking-[0.15em] text-white">
+                              SOLD OUT
+                            </span>
+                          )}
+
+                          {!isSoldOut &&
+                            isLowStock && (
+                              <span className="bg-orange-500 px-3 py-2 text-[10px] font-black tracking-[0.15em] text-white">
+                                LOW STOCK
+                              </span>
+                            )}
+                        </div>
+
+                        {!isSoldOut && (
+                          <div className="absolute bottom-3 right-3 bg-white/95 px-3 py-2 text-xs font-black text-black shadow-sm">
+                            {availableColours}{" "}
+                            {availableColours ===
+                            1
+                              ? "COLOUR"
+                              : "COLOURS"}
+                          </div>
+                        )}
+                      </a>
+
+                      <div className="mt-5">
+                        <div className="flex items-start justify-between gap-4">
+                          <a
+                            href={`/product/${product.slug}`}
+                          >
+                            <h3 className="text-xl font-black uppercase hover:underline">
+                              {product.name}
+                            </h3>
+                          </a>
+
+                          <p className="whitespace-nowrap text-lg font-black">
+                            Rs.{" "}
+                            {product.price.toLocaleString()}
+                          </p>
+                        </div>
+
+                        {product.description && (
+                          <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-600">
+                            {
+                              product.description
+                            }
+                          </p>
+                        )}
+
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                          {product.variants
+                            .slice(0, 6)
+                            .map(
+                              (
+                                variant,
+                                index
+                              ) => {
+                                const variantStock =
+                                  Object.values(
+                                    variant.stock
+                                  ).reduce(
+                                    (
+                                      total,
+                                      stockAmount
+                                    ) =>
+                                      total +
+                                      Number(
+                                        stockAmount ||
+                                          0
+                                      ),
+                                    0
+                                  );
+
+                                return (
+                                  <span
+                                    key={`${variant.slug}-${index}`}
+                                    title={`${variant.name}${
+                                      variantStock <=
+                                      0
+                                        ? " - Sold out"
+                                        : ""
+                                    }`}
+                                    className={`h-6 w-6 rounded-full border border-gray-300 ${
+                                      variantStock <=
+                                      0
+                                        ? "opacity-30"
+                                        : ""
+                                    }`}
+                                    style={{
+                                      backgroundColor:
+                                        variant.hex,
+                                    }}
+                                  />
+                                );
+                              }
+                            )}
+
+                          {product.variants
+                            .length >
+                            6 && (
+                            <span className="text-xs font-bold text-gray-500">
+                              +
+                              {product
+                                .variants
+                                .length -
+                                6}
+                            </span>
+                          )}
+                        </div>
+
+                        <a
+                          href={`/product/${product.slug}`}
+                          className={`mt-5 block w-full px-5 py-4 text-center font-black transition ${
+                            isSoldOut
+                              ? "bg-gray-300 text-gray-600 hover:bg-gray-400"
+                              : "bg-black text-white hover:bg-gray-800"
+                          }`}
+                        >
+                          {isSoldOut
+                            ? "VIEW SOLD OUT PRODUCT"
+                            : "VIEW PRODUCT"}
+                        </a>
+                      </div>
+                    </article>
+                  );
+                }
+              )}
+            </div>
+          ) : (
+            <div className="mt-10 border border-gray-200 bg-gray-50 px-6 py-16 text-center">
+              <h3 className="text-3xl font-black">
+                NO PRODUCTS FOUND
+              </h3>
+
+              <p className="mx-auto mt-4 max-w-xl leading-7 text-gray-600">
+                Search හෝ filters වලට
+                ගැළපෙන product එකක් නැහැ.
+                Filters clear කරලා නැවත
+                බලන්න.
+              </p>
+
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-7 bg-black px-8 py-4 font-black text-white transition hover:bg-gray-800"
+              >
+                CLEAR FILTERS
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -475,9 +1091,9 @@ export default function Home() {
           </h2>
 
           <p className="mx-auto mt-5 max-w-xl leading-7 text-gray-600">
-            Select a product, choose the size and quantity,
-            add it to the cart, and complete the order
-            through WhatsApp checkout.
+            Select a product, choose the colour, size and
+            quantity, add it to the cart, and complete the
+            order through WhatsApp checkout.
           </p>
 
           <a
