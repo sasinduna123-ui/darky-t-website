@@ -11,10 +11,8 @@ type CartItem = {
   id: string;
   name: string;
   image: string;
-
   color?: string;
   colorSlug?: string;
-
   size: string;
   price: number;
   quantity: number;
@@ -102,7 +100,9 @@ export default function CartPage() {
     }
   }, []);
 
-  function saveCart(updatedCart: CartItem[]) {
+  function saveCart(
+    updatedCart: CartItem[]
+  ) {
     setCartItems(updatedCart);
 
     localStorage.setItem(
@@ -121,7 +121,8 @@ export default function CartPage() {
         itemIndex === index
           ? {
               ...item,
-              quantity: item.quantity + 1,
+              quantity:
+                item.quantity + 1,
             }
           : item
     );
@@ -130,8 +131,8 @@ export default function CartPage() {
   }
 
   function decreaseQuantity(index: number) {
-    const updatedCart = cartItems
-      .map((item, itemIndex) =>
+    const updatedCart = cartItems.map(
+      (item, itemIndex) =>
         itemIndex === index
           ? {
               ...item,
@@ -141,14 +142,15 @@ export default function CartPage() {
               ),
             }
           : item
-      );
+    );
 
     saveCart(updatedCart);
   }
 
   function removeItem(index: number) {
     const updatedCart = cartItems.filter(
-      (_, itemIndex) => itemIndex !== index
+      (_, itemIndex) =>
+        itemIndex !== index
     );
 
     saveCart(updatedCart);
@@ -168,7 +170,8 @@ export default function CartPage() {
 
   const subtotal = cartItems.reduce(
     (total, item) =>
-      total + item.price * item.quantity,
+      total +
+      item.price * item.quantity,
     0
   );
 
@@ -259,7 +262,7 @@ export default function CartPage() {
 
     if (!alternativePhone.trim()) {
       setErrorMessage(
-        "Alternative phone number එකත් අනිවාර්යයෙන් ඇතුළත් කරන්න."
+        "Alternative phone number එක ඇතුළත් කරන්න."
       );
       return false;
     }
@@ -325,64 +328,62 @@ export default function CartPage() {
           item.color?.trim() ||
           "Not selected";
 
-        return `🛍️ *ITEM ${index + 1}*
+        return `*${index + 1}. ${item.name}*
 
-👕 Product: ${item.name}
-🎨 Colour: ${selectedColour}
-📏 Size: ${item.size}
-🔢 Quantity: ${item.quantity}
-💵 Unit Price: Rs. ${item.price.toLocaleString()}
-💰 Item Total: Rs. ${itemTotal.toLocaleString()}`;
+• Colour: ${selectedColour}
+• Size: ${item.size}
+• Quantity: ${item.quantity}
+• Unit Price: Rs. ${item.price.toLocaleString()}
+• Item Total: *Rs. ${itemTotal.toLocaleString()}*`;
       })
-      .join("\n\n━━━━━━━━━━━━━━━━━━\n\n");
+      .join(
+        "\n\n--------------------------------\n\n"
+      );
 
-    const deliveryMessage =
+    const deliveryDetails =
       hasFixedDeliveryFee
-        ? `🚚 Delivery Fee: Rs. ${deliveryFee.toLocaleString()}
-💳 Final Total: Rs. ${finalTotal.toLocaleString()}`
-        : `🚚 Delivery Fee: Please confirm through WhatsApp chat
-💳 Final Total: Will be confirmed after delivery fee is calculated`;
+        ? `• Delivery Fee: Rs. ${deliveryFee.toLocaleString()}
+• *Final Total: Rs. ${finalTotal.toLocaleString()}*`
+        : `• Delivery Fee: _To be confirmed through WhatsApp_
+• Final Total: _To be confirmed after calculating the delivery fee_`;
 
-    const whatsappMessage = `🖤 *DARKY T - NEW CART ORDER* 🖤
+    const whatsappMessage = `*DARKY T - NEW CART ORDER*
 
-Hello DARKY T 👋
-I would like to place an order.
+Hello DARKY T,
 
-━━━━━━━━━━━━━━━━━━
-🛒 *ORDER ITEMS*
-━━━━━━━━━━━━━━━━━━
+I would like to place the following order.
+
+--------------------------------
+*ORDER ITEMS*
+--------------------------------
 
 ${productDetails}
 
-━━━━━━━━━━━━━━━━━━
-🧾 *ORDER TOTAL*
-━━━━━━━━━━━━━━━━━━
+--------------------------------
+*ORDER SUMMARY*
+--------------------------------
 
-📦 Total Items: ${totalQuantity}
-💵 Subtotal: Rs. ${subtotal.toLocaleString()}
-${deliveryMessage}
+• Total Quantity: ${totalQuantity}
+• Subtotal: Rs. ${subtotal.toLocaleString()}
+${deliveryDetails}
 
-━━━━━━━━━━━━━━━━━━
-👤 *CUSTOMER DETAILS*
-━━━━━━━━━━━━━━━━━━
+--------------------------------
+*CUSTOMER DETAILS*
+--------------------------------
 
-🙍 Name: ${customerName.trim()}
-📞 Primary Phone: ${formattedPrimaryPhone}
-☎️ Alternative Phone: ${formattedAlternativePhone}
-📍 District: ${district.trim()}
-🏠 Delivery Address: ${address.trim()}
-📝 Note: ${note.trim() || "No special note"}
+• Name: ${customerName.trim()}
+• Primary Phone: ${formattedPrimaryPhone}
+• Alternative Phone: ${formattedAlternativePhone}
+• District: ${district.trim()}
+• Delivery Address: ${address.trim()}
+• Note: ${note.trim() || "No special note"}
 
-━━━━━━━━━━━━━━━━━━
-💳 *PAYMENT RECEIPT*
-━━━━━━━━━━━━━━━━━━
+--------------------------------
 
-📎 Payment එක කරලා receipt එකේ photo එකක් හෝ PDF එකක් මේ WhatsApp chat එකට එවන්න.
+*Please confirm my order.*
 
-━━━━━━━━━━━━━━━━━━
-
-✅ Please confirm my order.
-Thank you! 🖤`;
+Thank you,
+*DARKY T*`;
 
     const whatsappNumber =
       "94788809678";
@@ -411,7 +412,6 @@ Thank you! 🖤`;
 
   return (
     <main className="min-h-screen bg-gray-100 text-black">
-      {/* Navbar */}
       <nav className="flex items-center justify-between bg-black px-5 py-5 text-white md:px-12">
         <a
           href="/"
@@ -456,7 +456,6 @@ Thank you! 🖤`;
           </div>
         ) : (
           <div className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            {/* Cart Items */}
             <div className="space-y-6">
               <div className="bg-white p-6 shadow-sm md:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -586,7 +585,6 @@ Thank you! 🖤`;
                 </div>
               </div>
 
-              {/* Total Summary */}
               <div className="bg-white p-6 shadow-sm md:p-8">
                 <h2 className="text-2xl font-black">
                   ORDER SUMMARY
@@ -645,17 +643,19 @@ Thank you! 🖤`;
 
                 {!hasFixedDeliveryFee && (
                   <div className="mt-6 border border-orange-200 bg-orange-50 p-4 text-sm font-semibold leading-6 text-orange-700">
-                    මුළු quantity එක 5ට වැඩි නිසා delivery fee සහ final total එක WhatsApp එකෙන් confirm කරනවා.
+                    මුළු quantity එක 5ට වැඩි නිසා
+                    delivery fee සහ final total එක
+                    WhatsApp එකෙන් confirm කරනවා.
                   </div>
                 )}
 
                 <p className="mt-5 text-sm text-gray-500">
-                  Products 1–5 සඳහා delivery fee එක Rs. 350යි.
+                  Products 1–5 සඳහා delivery fee
+                  එක Rs. 350යි.
                 </p>
               </div>
             </div>
 
-            {/* Customer Details */}
             <form
               onSubmit={sendWhatsAppOrder}
               className="h-fit bg-white p-6 shadow-sm md:p-8"
@@ -728,7 +728,8 @@ Thank you! 🖤`;
                   />
 
                   <p className="mt-2 text-xs text-gray-500">
-                    Primary number එකට වෙනස් contact number එකක් දාන්න.
+                    Primary number එකට වෙනස් contact
+                    number එකක් දාන්න.
                   </p>
                 </div>
 
@@ -818,7 +819,9 @@ Thank you! 🖤`;
                 </button>
 
                 <p className="text-center text-xs leading-5 text-gray-500">
-                  Cart products, colours, sizes, delivery fee සහ customer details සියල්ල WhatsApp message එකට යනවා.
+                  Cart products, colours, sizes,
+                  delivery fee සහ customer details
+                  WhatsApp message එකට යනවා.
                 </p>
               </div>
             </form>
