@@ -11,11 +11,20 @@ type CartItem = {
   id: string;
   name: string;
   image: string;
+
   color?: string;
   colorSlug?: string;
+
   size: string;
   price: number;
   quantity: number;
+
+  maxStock?: number;
+};
+
+type CartMessage = {
+  type: "success" | "warning" | "error";
+  text: string;
 };
 
 const districts = [
@@ -47,12 +56,14 @@ const districts = [
 ];
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState<
-    CartItem[]
-  >([]);
+  const [cartItems, setCartItems] =
+    useState<CartItem[]>([]);
 
   const [isLoading, setIsLoading] =
     useState(true);
+
+  const [orderId, setOrderId] =
+    useState("");
 
   const [customerName, setCustomerName] =
     useState("");
@@ -60,8 +71,10 @@ export default function CartPage() {
   const [primaryPhone, setPrimaryPhone] =
     useState("");
 
-  const [alternativePhone, setAlternativePhone] =
-    useState("");
+  const [
+    alternativePhone,
+    setAlternativePhone,
+  ] = useState("");
 
   const [district, setDistrict] =
     useState("");
@@ -75,24 +88,149 @@ export default function CartPage() {
   const [errorMessage, setErrorMessage] =
     useState("");
 
+  const [cartMessage, setCartMessage] =
+    useState<CartMessage | null>(null);
+
+  function generateOrderId(): string {
+    const now = new Date();
+
+    const year =
+      now.getFullYear();
+
+    const month = String(
+      now.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+      now.getDate()
+    ).padStart(2, "0");
+
+    const randomNumber = Math.floor(
+      1000 + Math.random() * 9000
+    );
+
+    return `DT-${year}${month}${day}-${randomNumber}`;
+  }
+
+  function showCartMessage(
+    message: CartMessage
+  ) {
+    setCartMessage(message);
+
+    window.setTimeout(() => {
+      setCartMessage(null);
+    }, 3500);
+  }
+
+  function getSafeMaxStock(
+    item: CartItem
+  ): number {
+    const stock =
+      Number(item.maxStock);
+
+    if (
+      !Number.isFinite(stock) ||
+      stock <= 0
+    ) {
+      return Math.max(
+        1,
+        Number(item.quantity) || 1
+      );
+    }
+
+    return Math.floor(stock);
+  }
+
+  function normalizeCart(
+    items: CartItem[]
+  ): CartItem[] {
+    return items
+      .filter(
+        (item) =>
+          item &&
+          typeof item.id === "string" &&
+          typeof item.name === "string" &&
+          Number(item.price) >= 0
+      )
+      .map((item) => {
+        const maxStock =
+          getSafeMaxStock(item);
+
+        const safeQuantity =
+          Math.min(
+            maxStock,
+            Math.max(
+              1,
+              Math.floor(
+                Number(item.quantity) || 1
+              )
+            )
+          );
+
+        return {
+          ...item,
+          price:
+            Number(item.price) || 0,
+          quantity: safeQuantity,
+          maxStock,
+        };
+      });
+  }
+
   useEffect(() => {
     try {
       const savedCart =
-        localStorage.getItem("darky-cart");
+        localStorage.getItem(
+          "darky-cart"
+        );
 
       if (!savedCart) {
         setCartItems([]);
-        return;
+      } else {
+        const parsedCart =
+          JSON.parse(savedCart);
+
+        if (
+          Array.isArray(parsedCart)
+        ) {
+          const normalizedCart =
+            normalizeCart(
+              parsedCart
+            );
+
+          setCartItems(
+            normalizedCart
+          );
+
+          localStorage.setItem(
+            "darky-cart",
+            JSON.stringify(
+              normalizedCart
+            )
+          );
+        } else {
+          setCartItems([]);
+        }
       }
 
-      const parsedCart: CartItem[] =
-        JSON.parse(savedCart);
+      const savedOrderId =
+        localStorage.getItem(
+          "darky-cart-order-id"
+        );
 
-      setCartItems(
-        Array.isArray(parsedCart)
-          ? parsedCart
-          : []
-      );
+      if (savedOrderId) {
+        setOrderId(savedOrderId);
+      } else {
+        const newOrderId =
+          generateOrderId();
+
+        localStorage.setItem(
+          "darky-cart-order-id",
+          newOrderId
+        );
+
+        setOrderId(newOrderId);
+      }
     } catch {
       setCartItems([]);
     } finally {
@@ -103,90 +241,162 @@ export default function CartPage() {
   function saveCart(
     updatedCart: CartItem[]
   ) {
-    setCartItems(updatedCart);
+    const normalizedCart =
+      normalizeCart(updatedCart);
+
+    setCartItems(normalizedCart);
 
     localStorage.setItem(
       "darky-cart",
-      JSON.stringify(updatedCart)
+      JSON.stringify(normalizedCart)
     );
 
     window.dispatchEvent(
-      new Event("darky-cart-updated")
+      new Event(
+        "darky-cart-updated"
+      )
     );
   }
 
-  function increaseQuantity(index: number) {
-    const updatedCart = cartItems.map(
-      (item, itemIndex) =>
-        itemIndex === index
-          ? {
-              ...item,
-              quantity:
-                item.quantity + 1,
-            }
-          : item
-    );
+  function increaseQuantity(
+    index: number
+  ) {
+    const selectedItem =
+      cartItems[index];
+
+    if (!selectedItem) {
+      return;
+    }
+
+    const maxStock =
+      getSafeMaxStock(selectedItem);
+
+    if (
+      selectedItem.quantity >=
+      maxStock
+    ) {
+      showCartMessage({
+        type: "warning",
+        text: `${selectedItem.name} - ${selectedItem.color || "Selected colour"} - ${selectedItem.size} සඳහා maximum stock reached.`,
+      });
+
+      return;
+    }
+
+    const updatedCart =
+      cartItems.map(
+        (item, itemIndex) =>
+          itemIndex === index
+            ? {
+                ...item,
+                quantity:
+                  item.quantity + 1,
+              }
+            : item
+      );
 
     saveCart(updatedCart);
+    setErrorMessage("");
   }
 
-  function decreaseQuantity(index: number) {
-    const updatedCart = cartItems.map(
-      (item, itemIndex) =>
-        itemIndex === index
-          ? {
-              ...item,
-              quantity: Math.max(
-                1,
-                item.quantity - 1
-              ),
-            }
-          : item
-    );
+  function decreaseQuantity(
+    index: number
+  ) {
+    const updatedCart =
+      cartItems.map(
+        (item, itemIndex) =>
+          itemIndex === index
+            ? {
+                ...item,
+                quantity:
+                  Math.max(
+                    1,
+                    item.quantity - 1
+                  ),
+              }
+            : item
+      );
 
     saveCart(updatedCart);
+    setErrorMessage("");
   }
 
-  function removeItem(index: number) {
-    const updatedCart = cartItems.filter(
-      (_, itemIndex) =>
-        itemIndex !== index
-    );
+  function removeItem(
+    index: number
+  ) {
+    const removedItem =
+      cartItems[index];
+
+    const updatedCart =
+      cartItems.filter(
+        (_, itemIndex) =>
+          itemIndex !== index
+      );
 
     saveCart(updatedCart);
+    setErrorMessage("");
+
+    if (removedItem) {
+      showCartMessage({
+        type: "success",
+        text: `${removedItem.name} cart එකෙන් remove කළා.`,
+      });
+    }
   }
 
   function clearCart() {
-    const confirmed = window.confirm(
-      "Cart එකේ products සියල්ල remove කරන්නද?"
-    );
+    const confirmed =
+      window.confirm(
+        "Cart එකේ products සියල්ල remove කරන්නද?"
+      );
 
     if (!confirmed) {
       return;
     }
 
     saveCart([]);
+
+    localStorage.removeItem(
+      "darky-cart-order-id"
+    );
+
+    setOrderId(
+      generateOrderId()
+    );
+
+    setErrorMessage("");
+
+    showCartMessage({
+      type: "success",
+      text: "Cart එක clear කළා.",
+    });
   }
 
-  const subtotal = cartItems.reduce(
-    (total, item) =>
-      total +
-      item.price * item.quantity,
-    0
-  );
+  const subtotal =
+    cartItems.reduce(
+      (total, item) =>
+        total +
+        item.price *
+          item.quantity,
+      0
+    );
 
-  const totalQuantity = cartItems.reduce(
-    (total, item) =>
-      total + item.quantity,
-    0
-  );
+  const totalQuantity =
+    cartItems.reduce(
+      (total, item) =>
+        total +
+        item.quantity,
+      0
+    );
 
   const hasFixedDeliveryFee =
     totalQuantity > 0 &&
     totalQuantity <= 5;
 
   const deliveryFee =
-    hasFixedDeliveryFee ? 350 : 0;
+    hasFixedDeliveryFee
+      ? 350
+      : 0;
 
   const finalTotal =
     subtotal + deliveryFee;
@@ -194,7 +404,10 @@ export default function CartPage() {
   function cleanPhoneNumber(
     value: string
   ): string {
-    return value.replace(/\D/g, "");
+    return value.replace(
+      /\D/g,
+      ""
+    );
   }
 
   function formatSriLankanPhone(
@@ -203,12 +416,22 @@ export default function CartPage() {
     const cleanedNumber =
       cleanPhoneNumber(value);
 
-    if (cleanedNumber.startsWith("94")) {
+    if (
+      cleanedNumber.startsWith(
+        "94"
+      )
+    ) {
       return `+${cleanedNumber}`;
     }
 
-    if (cleanedNumber.startsWith("0")) {
-      return `+94${cleanedNumber.slice(1)}`;
+    if (
+      cleanedNumber.startsWith(
+        "0"
+      )
+    ) {
+      return `+94${cleanedNumber.slice(
+        1
+      )}`;
     }
 
     return `+94${cleanedNumber}`;
@@ -220,85 +443,186 @@ export default function CartPage() {
     const cleanedNumber =
       cleanPhoneNumber(value);
 
-    if (cleanedNumber.startsWith("94")) {
-      return cleanedNumber.length === 11;
+    if (
+      cleanedNumber.startsWith(
+        "94"
+      )
+    ) {
+      return (
+        cleanedNumber.length ===
+        11
+      );
     }
 
-    if (cleanedNumber.startsWith("0")) {
-      return cleanedNumber.length === 10;
+    if (
+      cleanedNumber.startsWith(
+        "0"
+      )
+    ) {
+      return (
+        cleanedNumber.length ===
+        10
+      );
     }
 
-    return cleanedNumber.length === 9;
+    return (
+      cleanedNumber.length === 9
+    );
+  }
+
+  function validateCartStock(): boolean {
+    for (
+      let index = 0;
+      index < cartItems.length;
+      index += 1
+    ) {
+      const item =
+        cartItems[index];
+
+      const maxStock =
+        getSafeMaxStock(item);
+
+      if (maxStock <= 0) {
+        setErrorMessage(
+          `${item.name} - ${item.color || "Selected colour"} - ${item.size} දැනට out of stock.`
+        );
+
+        return false;
+      }
+
+      if (
+        item.quantity >
+        maxStock
+      ) {
+        setErrorMessage(
+          `${item.name} - ${item.color || "Selected colour"} - ${item.size} stock limit එක ${maxStock}යි.`
+        );
+
+        return false;
+      }
+
+      if (
+        item.quantity < 1
+      ) {
+        setErrorMessage(
+          `${item.name} quantity එක invalid.`
+        );
+
+        return false;
+      }
+    }
+
+    return true;
   }
 
   function validateForm(): boolean {
-    if (cartItems.length === 0) {
+    if (
+      cartItems.length === 0
+    ) {
       setErrorMessage(
         "Cart එකේ products කිසිවක් නැහැ."
       );
-      return false;
-    }
 
-    if (!customerName.trim()) {
-      setErrorMessage(
-        "Customer name එක ඇතුළත් කරන්න."
-      );
-      return false;
-    }
-
-    if (!primaryPhone.trim()) {
-      setErrorMessage(
-        "Primary phone number එක ඇතුළත් කරන්න."
-      );
-      return false;
-    }
-
-    if (!isValidPhone(primaryPhone)) {
-      setErrorMessage(
-        "හරි primary phone number එකක් ඇතුළත් කරන්න."
-      );
-      return false;
-    }
-
-    if (!alternativePhone.trim()) {
-      setErrorMessage(
-        "Alternative phone number එක ඇතුළත් කරන්න."
-      );
-      return false;
-    }
-
-    if (!isValidPhone(alternativePhone)) {
-      setErrorMessage(
-        "හරි alternative phone number එකක් ඇතුළත් කරන්න."
-      );
       return false;
     }
 
     if (
-      cleanPhoneNumber(primaryPhone) ===
-      cleanPhoneNumber(alternativePhone)
+      !validateCartStock()
+    ) {
+      return false;
+    }
+
+    if (
+      !customerName.trim()
+    ) {
+      setErrorMessage(
+        "Customer name එක ඇතුළත් කරන්න."
+      );
+
+      return false;
+    }
+
+    if (
+      !primaryPhone.trim()
+    ) {
+      setErrorMessage(
+        "Primary phone number එක ඇතුළත් කරන්න."
+      );
+
+      return false;
+    }
+
+    if (
+      !isValidPhone(
+        primaryPhone
+      )
+    ) {
+      setErrorMessage(
+        "හරි primary phone number එකක් ඇතුළත් කරන්න."
+      );
+
+      return false;
+    }
+
+    if (
+      !alternativePhone.trim()
+    ) {
+      setErrorMessage(
+        "Alternative phone number එක ඇතුළත් කරන්න."
+      );
+
+      return false;
+    }
+
+    if (
+      !isValidPhone(
+        alternativePhone
+      )
+    ) {
+      setErrorMessage(
+        "හරි alternative phone number එකක් ඇතුළත් කරන්න."
+      );
+
+      return false;
+    }
+
+    if (
+      cleanPhoneNumber(
+        primaryPhone
+      ) ===
+      cleanPhoneNumber(
+        alternativePhone
+      )
     ) {
       setErrorMessage(
         "Phone numbers දෙකට වෙනස් numbers දෙකක් ඇතුළත් කරන්න."
       );
+
       return false;
     }
 
-    if (!district.trim()) {
+    if (
+      !district.trim()
+    ) {
       setErrorMessage(
         "District එක තෝරන්න."
       );
+
       return false;
     }
 
-    if (!address.trim()) {
+    if (
+      !address.trim()
+    ) {
       setErrorMessage(
         "Delivery address එක ඇතුළත් කරන්න."
       );
+
       return false;
     }
 
     setErrorMessage("");
+
     return true;
   }
 
@@ -311,34 +635,54 @@ export default function CartPage() {
       return;
     }
 
+    const currentOrderId =
+      orderId || generateOrderId();
+
+    if (!orderId) {
+      localStorage.setItem(
+        "darky-cart-order-id",
+        currentOrderId
+      );
+
+      setOrderId(
+        currentOrderId
+      );
+    }
+
     const formattedPrimaryPhone =
-      formatSriLankanPhone(primaryPhone);
+      formatSriLankanPhone(
+        primaryPhone
+      );
 
     const formattedAlternativePhone =
       formatSriLankanPhone(
         alternativePhone
       );
 
-    const productDetails = cartItems
-      .map((item, index) => {
-        const itemTotal =
-          item.price * item.quantity;
+    const productDetails =
+      cartItems
+        .map(
+          (item, index) => {
+            const itemTotal =
+              item.price *
+              item.quantity;
 
-        const selectedColour =
-          item.color?.trim() ||
-          "Not selected";
+            const selectedColour =
+              item.color?.trim() ||
+              "Not selected";
 
-        return `*${index + 1}. ${item.name}*
+            return `*${index + 1}. ${item.name}*
 
 • Colour: ${selectedColour}
 • Size: ${item.size}
 • Quantity: ${item.quantity}
 • Unit Price: Rs. ${item.price.toLocaleString()}
 • Item Total: *Rs. ${itemTotal.toLocaleString()}*`;
-      })
-      .join(
-        "\n\n--------------------------------\n\n"
-      );
+          }
+        )
+        .join(
+          "\n\n--------------------------------\n\n"
+        );
 
     const deliveryDetails =
       hasFixedDeliveryFee
@@ -348,6 +692,8 @@ export default function CartPage() {
 • Final Total: _To be confirmed after calculating the delivery fee_`;
 
     const whatsappMessage = `*DARKY T - NEW CART ORDER*
+
+*Order ID: ${currentOrderId}*
 
 Hello DARKY T,
 
@@ -385,6 +731,60 @@ ${deliveryDetails}
 Thank you,
 *DARKY T*`;
 
+    const lastOrderData = {
+      orderId:
+        currentOrderId,
+
+      orderType:
+        "cart",
+
+      customerName:
+        customerName.trim(),
+
+      primaryPhone:
+        formattedPrimaryPhone,
+
+      alternativePhone:
+        formattedAlternativePhone,
+
+      district:
+        district.trim(),
+
+      address:
+        address.trim(),
+
+      note:
+        note.trim() ||
+        "No special note",
+
+      items:
+        cartItems,
+
+      totalQuantity,
+
+      subtotal,
+
+      deliveryFee:
+        hasFixedDeliveryFee
+          ? deliveryFee
+          : null,
+
+      finalTotal:
+        hasFixedDeliveryFee
+          ? finalTotal
+          : null,
+
+      createdAt:
+        new Date().toISOString(),
+    };
+
+    localStorage.setItem(
+      "darky-last-order",
+      JSON.stringify(
+        lastOrderData
+      )
+    );
+
     const whatsappNumber =
       "94788809678";
 
@@ -412,6 +812,24 @@ Thank you,
 
   return (
     <main className="min-h-screen bg-gray-100 text-black">
+      {cartMessage && (
+        <div className="fixed left-1/2 top-5 z-[100] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
+          <div
+            className={`border px-5 py-4 text-center text-sm font-bold shadow-xl ${
+              cartMessage.type ===
+              "success"
+                ? "border-green-300 bg-green-50 text-green-700"
+                : cartMessage.type ===
+                    "warning"
+                  ? "border-orange-300 bg-orange-50 text-orange-700"
+                  : "border-red-300 bg-red-50 text-red-700"
+            }`}
+          >
+            {cartMessage.text}
+          </div>
+        </div>
+      )}
+
       <nav className="flex items-center justify-between bg-black px-5 py-5 text-white md:px-12">
         <a
           href="/"
@@ -422,7 +840,7 @@ Thank you,
 
         <a
           href="/#shop"
-          className="text-sm font-bold transition hover:text-gray-300"
+          className="text-xs font-bold transition hover:text-gray-300 sm:text-sm"
         >
           CONTINUE SHOPPING
         </a>
@@ -436,6 +854,19 @@ Thank you,
         <h1 className="mt-3 text-4xl font-black md:text-5xl">
           YOUR CART
         </h1>
+
+        {cartItems.length > 0 && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-gray-300 bg-white px-5 py-4">
+            <span className="text-sm font-bold text-gray-500">
+              ORDER ID
+            </span>
+
+            <span className="font-black tracking-wider">
+              {orderId ||
+                "Generating..."}
+            </span>
+          </div>
+        )}
 
         {cartItems.length === 0 ? (
           <div className="mt-10 bg-white p-10 text-center shadow-sm">
@@ -455,7 +886,7 @@ Thank you,
             </a>
           </div>
         ) : (
-          <div className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="mt-8 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-6">
               <div className="bg-white p-6 shadow-sm md:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -474,7 +905,10 @@ Thank you,
 
                 <div className="mt-7 space-y-6">
                   {cartItems.map(
-                    (item, index) => {
+                    (
+                      item,
+                      index
+                    ) => {
                       const itemTotal =
                         item.price *
                         item.quantity;
@@ -483,39 +917,72 @@ Thank you,
                         item.color?.trim() ||
                         "Not selected";
 
+                      const maxStock =
+                        getSafeMaxStock(
+                          item
+                        );
+
+                      const isLowStock =
+                        maxStock > 0 &&
+                        maxStock <= 3;
+
+                      const hasReachedStockLimit =
+                        item.quantity >=
+                        maxStock;
+
                       return (
                         <div
                           key={`${item.id}-${item.colorSlug || selectedColour}-${item.size}-${index}`}
                           className="border-b pb-6 last:border-b-0 last:pb-0"
                         >
                           <div className="flex flex-col gap-5 sm:flex-row">
-                            <div className="w-full overflow-hidden bg-gray-100 sm:w-36">
+                            <div className="relative w-full overflow-hidden bg-gray-100 sm:w-36">
                               <img
-                                src={item.image}
-                                alt={item.name}
+                                src={
+                                  item.image
+                                }
+                                alt={
+                                  item.name
+                                }
                                 className="aspect-square h-full w-full object-cover"
                               />
+
+                              {isLowStock && (
+                                <span className="absolute left-2 top-2 bg-black px-2 py-1 text-[10px] font-black text-white">
+                                  ONLY{" "}
+                                  {
+                                    maxStock
+                                  }{" "}
+                                  LEFT
+                                </span>
+                              )}
                             </div>
 
                             <div className="flex-1">
                               <div className="flex flex-col justify-between gap-4 sm:flex-row">
                                 <div>
                                   <h3 className="text-xl font-black">
-                                    {item.name}
+                                    {
+                                      item.name
+                                    }
                                   </h3>
 
                                   <div className="mt-3 space-y-1 text-sm text-gray-600">
                                     <p>
                                       Colour:{" "}
                                       <span className="font-bold text-black">
-                                        {selectedColour}
+                                        {
+                                          selectedColour
+                                        }
                                       </span>
                                     </p>
 
                                     <p>
                                       Size:{" "}
                                       <span className="font-bold text-black">
-                                        {item.size}
+                                        {
+                                          item.size
+                                        }
                                       </span>
                                     </p>
 
@@ -524,6 +991,21 @@ Thank you,
                                       <span className="font-bold text-black">
                                         Rs.{" "}
                                         {item.price.toLocaleString()}
+                                      </span>
+                                    </p>
+
+                                    <p>
+                                      Available Stock:{" "}
+                                      <span
+                                        className={`font-bold ${
+                                          isLowStock
+                                            ? "text-orange-600"
+                                            : "text-black"
+                                        }`}
+                                      >
+                                        {
+                                          maxStock
+                                        }
                                       </span>
                                     </p>
                                   </div>
@@ -536,40 +1018,68 @@ Thank you,
                               </div>
 
                               <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-                                <div className="flex items-center border border-gray-300">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      decreaseQuantity(
-                                        index
-                                      )
-                                    }
-                                    className="h-11 w-11 text-xl transition hover:bg-gray-100"
-                                  >
-                                    −
-                                  </button>
+                                <div>
+                                  <div className="flex items-center border border-gray-300">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        decreaseQuantity(
+                                          index
+                                        )
+                                      }
+                                      disabled={
+                                        item.quantity <=
+                                        1
+                                      }
+                                      className={`h-11 w-11 text-xl ${
+                                        item.quantity <=
+                                        1
+                                          ? "cursor-not-allowed text-gray-300"
+                                          : "hover:bg-gray-100"
+                                      }`}
+                                    >
+                                      −
+                                    </button>
 
-                                  <span className="flex h-11 min-w-12 items-center justify-center font-bold">
-                                    {item.quantity}
-                                  </span>
+                                    <span className="flex h-11 min-w-12 items-center justify-center font-bold">
+                                      {
+                                        item.quantity
+                                      }
+                                    </span>
 
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      increaseQuantity(
-                                        index
-                                      )
-                                    }
-                                    className="h-11 w-11 text-xl transition hover:bg-gray-100"
-                                  >
-                                    +
-                                  </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        increaseQuantity(
+                                          index
+                                        )
+                                      }
+                                      disabled={
+                                        hasReachedStockLimit
+                                      }
+                                      className={`h-11 w-11 text-xl ${
+                                        hasReachedStockLimit
+                                          ? "cursor-not-allowed text-gray-300"
+                                          : "hover:bg-gray-100"
+                                      }`}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+
+                                  {hasReachedStockLimit && (
+                                    <p className="mt-2 text-xs font-bold text-orange-600">
+                                      Maximum stock reached
+                                    </p>
+                                  )}
                                 </div>
 
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    removeItem(index)
+                                    removeItem(
+                                      index
+                                    )
                                   }
                                   className="text-sm font-bold text-red-600 underline underline-offset-4"
                                 >
@@ -597,7 +1107,9 @@ Thank you,
                     </span>
 
                     <span className="font-bold">
-                      {totalQuantity}
+                      {
+                        totalQuantity
+                      }
                     </span>
                   </div>
 
@@ -643,21 +1155,20 @@ Thank you,
 
                 {!hasFixedDeliveryFee && (
                   <div className="mt-6 border border-orange-200 bg-orange-50 p-4 text-sm font-semibold leading-6 text-orange-700">
-                    මුළු quantity එක 5ට වැඩි නිසා
-                    delivery fee සහ final total එක
-                    WhatsApp එකෙන් confirm කරනවා.
+                    මුළු quantity එක 5ට වැඩි නිසා delivery fee සහ final total එක WhatsApp එකෙන් confirm කරනවා.
                   </div>
                 )}
 
                 <p className="mt-5 text-sm text-gray-500">
-                  Products 1–5 සඳහා delivery fee
-                  එක Rs. 350යි.
+                  Products 1–5 සඳහා delivery fee එක Rs. 350යි.
                 </p>
               </div>
             </div>
 
             <form
-              onSubmit={sendWhatsAppOrder}
+              onSubmit={
+                sendWhatsAppOrder
+              }
               className="h-fit bg-white p-6 shadow-sm md:p-8"
             >
               <h2 className="text-2xl font-black">
@@ -677,10 +1188,15 @@ Thank you,
                   <input
                     type="text"
                     required
-                    value={customerName}
-                    onChange={(event) =>
+                    value={
+                      customerName
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       setCustomerName(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="ඔයාගේ සම්පූර්ණ නම"
@@ -697,10 +1213,15 @@ Thank you,
                   <input
                     type="tel"
                     required
-                    value={primaryPhone}
-                    onChange={(event) =>
+                    value={
+                      primaryPhone
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       setPrimaryPhone(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="07XXXXXXXX"
@@ -717,10 +1238,15 @@ Thank you,
                   <input
                     type="tel"
                     required
-                    value={alternativePhone}
-                    onChange={(event) =>
+                    value={
+                      alternativePhone
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       setAlternativePhone(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="07XXXXXXXX"
@@ -728,8 +1254,7 @@ Thank you,
                   />
 
                   <p className="mt-2 text-xs text-gray-500">
-                    Primary number එකට වෙනස් contact
-                    number එකක් දාන්න.
+                    Primary number එකට වෙනස් contact number එකක් දාන්න.
                   </p>
                 </div>
 
@@ -741,9 +1266,12 @@ Thank you,
                   <select
                     required
                     value={district}
-                    onChange={(event) =>
+                    onChange={(
+                      event
+                    ) =>
                       setDistrict(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     className="w-full border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-black"
@@ -753,12 +1281,20 @@ Thank you,
                     </option>
 
                     {districts.map(
-                      (districtName) => (
+                      (
+                        districtName
+                      ) => (
                         <option
-                          key={districtName}
-                          value={districtName}
+                          key={
+                            districtName
+                          }
+                          value={
+                            districtName
+                          }
                         >
-                          {districtName}
+                          {
+                            districtName
+                          }
                         </option>
                       )
                     )}
@@ -773,9 +1309,12 @@ Thank you,
                   <textarea
                     required
                     value={address}
-                    onChange={(event) =>
+                    onChange={(
+                      event
+                    ) =>
                       setAddress(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     rows={4}
@@ -792,9 +1331,12 @@ Thank you,
 
                   <textarea
                     value={note}
-                    onChange={(event) =>
+                    onChange={(
+                      event
+                    ) =>
                       setNote(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     rows={3}
@@ -819,9 +1361,7 @@ Thank you,
                 </button>
 
                 <p className="text-center text-xs leading-5 text-gray-500">
-                  Cart products, colours, sizes,
-                  delivery fee සහ customer details
-                  WhatsApp message එකට යනවා.
+                  Order ID, cart products, colours, sizes, delivery fee සහ customer details WhatsApp message එකට යනවා.
                 </p>
               </div>
             </form>
