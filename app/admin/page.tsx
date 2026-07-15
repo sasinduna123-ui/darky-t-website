@@ -1566,10 +1566,17 @@ export default function AdminPage() {
           DARKY T
         </a>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <a
+            href="/admin/orders"
+            className="border border-white px-4 py-2 text-sm font-black transition hover:bg-white hover:text-black"
+          >
+            ORDER DASHBOARD
+          </a>
+
           <a
             href="/"
-            className="text-sm font-bold hover:text-gray-300"
+            className="px-4 py-2 text-sm font-bold transition hover:text-gray-300"
           >
             HOME
           </a>
