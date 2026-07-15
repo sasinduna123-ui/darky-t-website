@@ -37,207 +37,6 @@ type CreateOrderInput = {
   items: OrderItemInput[];
 };
 
-type PreparedOrderItem = {
-  productId: string;
-  variantId: string;
-  productName: string;
-  colourName: string;
-  size: string;
-  quantity: number;
-  unitPrice: number;
-  itemTotal: number;
-};
-
-async function sendWhatsAppOrderNotification({
-  order,
-  preparedItems,
-  totalQuantity,
-  subtotal,
-  deliveryFee,
-  finalTotal,
-}: {
-  order: CreateOrderInput;
-  preparedItems: PreparedOrderItem[];
-  totalQuantity: number;
-  subtotal: number;
-  deliveryFee: number;
-  finalTotal: number;
-}) {
-  const accessToken =
-    process.env.WHATSAPP_ACCESS_TOKEN?.trim();
-
-  const phoneNumberId =
-    process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
-
-  const adminNumber =
-    process.env.WHATSAPP_ADMIN_NUMBER?.replace(
-      /\D/g,
-      ""
-    );
-
-  const graphApiVersion =
-    process.env.WHATSAPP_GRAPH_API_VERSION?.trim() ||
-    "v25.0";
-
-  const templateName =
-    process.env.WHATSAPP_TEMPLATE_NAME?.trim() ||
-    "hello_world";
-
-  const templateLanguage =
-    process.env.WHATSAPP_TEMPLATE_LANGUAGE?.trim() ||
-    "en_US";
-
-  if (
-    !accessToken ||
-    !phoneNumberId ||
-    !adminNumber
-  ) {
-    return {
-      sent: false,
-      skipped: true,
-      error:
-        "WhatsApp environment variables are not configured.",
-    };
-  }
-
-  const itemSummary = preparedItems
-    .map(
-      (item) =>
-        `${item.productName} | ${item.colourName} | ${item.size} x ${item.quantity}`
-    )
-    .join(", ");
-
-  const payload: Record<string, unknown> = {
-    messaging_product: "whatsapp",
-    recipient_type: "individual",
-    to: adminNumber,
-    type: "template",
-    template: {
-      name: templateName,
-      language: {
-        code: templateLanguage,
-      },
-    },
-  };
-
-  if (
-    templateName ===
-    "darky_t_new_order"
-  ) {
-    payload.template = {
-      name: templateName,
-      language: {
-        code: templateLanguage,
-      },
-      components: [
-        {
-          type: "body",
-          parameters: [
-            {
-              type: "text",
-              text: cleanText(
-                order.orderNumber
-              ),
-            },
-            {
-              type: "text",
-              text: cleanText(
-                order.customerName
-              ),
-            },
-            {
-              type: "text",
-              text: cleanText(
-                order.primaryPhone
-              ),
-            },
-            {
-              type: "text",
-              text: cleanText(
-                order.district
-              ),
-            },
-            {
-              type: "text",
-              text: itemSummary.slice(
-                0,
-                900
-              ),
-            },
-            {
-              type: "text",
-              text: String(
-                totalQuantity
-              ),
-            },
-            {
-              type: "text",
-              text: String(
-                subtotal
-              ),
-            },
-            {
-              type: "text",
-              text: String(
-                deliveryFee
-              ),
-            },
-            {
-              type: "text",
-              text: String(
-                finalTotal
-              ),
-            },
-          ],
-        },
-      ],
-    };
-  }
-
-  const response = await fetch(
-    `https://graph.facebook.com/${graphApiVersion}/${phoneNumberId}/messages`,
-    {
-      method: "POST",
-
-      headers: {
-        Authorization:
-          `Bearer ${accessToken}`,
-
-        "Content-Type":
-          "application/json",
-      },
-
-      body:
-        JSON.stringify(
-          payload
-        ),
-
-      cache: "no-store",
-    }
-  );
-
-  const result =
-    await response.json();
-
-  if (!response.ok) {
-    const apiError =
-      result?.error?.message ||
-      "WhatsApp notification failed.";
-
-    throw new Error(
-      apiError
-    );
-  }
-
-  return {
-    sent: true,
-    skipped: false,
-    messageId:
-      result?.messages?.[0]?.id ||
-      null,
-  };
-}
-
 function cleanText(
   value: unknown
 ): string {
@@ -524,8 +323,7 @@ export async function POST(
       );
     }
 
-    const preparedItems:
-      PreparedOrderItem[] = [];
+    const preparedItems = [];
 
     for (
       const item of
@@ -795,52 +593,6 @@ export async function POST(
       );
     }
 
-    let whatsappNotification = {
-      sent: false,
-      skipped: false,
-      error: "",
-    };
-
-    try {
-      const notificationResult =
-        await sendWhatsAppOrderNotification({
-          order,
-          preparedItems,
-          totalQuantity,
-          subtotal,
-          deliveryFee,
-          finalTotal,
-        });
-
-      whatsappNotification = {
-        sent:
-          notificationResult.sent,
-
-        skipped:
-          notificationResult.skipped,
-
-        error:
-          notificationResult.error ||
-          "",
-      };
-    } catch (notificationError) {
-      whatsappNotification = {
-        sent: false,
-        skipped: false,
-
-        error:
-          notificationError instanceof
-          Error
-            ? notificationError.message
-            : "WhatsApp notification failed.",
-      };
-
-      console.error(
-        "WhatsApp order notification error:",
-        notificationError
-      );
-    }
-
     return NextResponse.json({
       success: true,
 
@@ -855,12 +607,8 @@ export async function POST(
       deliveryFee,
       finalTotal,
 
-      whatsappNotification,
-
       message:
-        whatsappNotification.sent
-          ? "Order එක save කරලා WhatsApp notification එකත් යැව්වා."
-          : "Order එක save කළා. WhatsApp notification එක යවන්න බැරි වුණා.",
+        "Order එක Supabase database එකට save කළා.",
     });
   } catch (error) {
     if (createdOrderId) {
