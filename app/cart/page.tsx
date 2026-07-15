@@ -105,9 +105,10 @@ export default function CartPage() {
       now.getDate()
     ).padStart(2, "0");
 
-    const randomNumber = Math.floor(
-      1000 + Math.random() * 9000
-    );
+    const randomNumber =
+      Math.floor(
+        1000 + Math.random() * 9000
+      );
 
     return `DT-${year}${month}${day}-${randomNumber}`;
   }
@@ -194,9 +195,7 @@ export default function CartPage() {
           Array.isArray(parsedCart)
         ) {
           const normalizedCart =
-            normalizeCart(
-              parsedCart
-            );
+            normalizeCart(parsedCart);
 
           setCartItems(
             normalizedCart
@@ -248,7 +247,9 @@ export default function CartPage() {
 
     localStorage.setItem(
       "darky-cart",
-      JSON.stringify(normalizedCart)
+      JSON.stringify(
+        normalizedCart
+      )
     );
 
     window.dispatchEvent(
@@ -269,7 +270,9 @@ export default function CartPage() {
     }
 
     const maxStock =
-      getSafeMaxStock(selectedItem);
+      getSafeMaxStock(
+        selectedItem
+      );
 
     if (
       selectedItem.quantity >=
@@ -277,7 +280,12 @@ export default function CartPage() {
     ) {
       showCartMessage({
         type: "warning",
-        text: `${selectedItem.name} - ${selectedItem.color || "Selected colour"} - ${selectedItem.size} සඳහා maximum stock reached.`,
+        text: `${selectedItem.name} - ${
+          selectedItem.color ||
+          "Selected colour"
+        } - ${
+          selectedItem.size
+        } සඳහා maximum stock reached.`,
       });
 
       return;
@@ -360,10 +368,15 @@ export default function CartPage() {
       "darky-cart-order-id"
     );
 
-    setOrderId(
-      generateOrderId()
+    const newOrderId =
+      generateOrderId();
+
+    localStorage.setItem(
+      "darky-cart-order-id",
+      newOrderId
     );
 
+    setOrderId(newOrderId);
     setErrorMessage("");
 
     showCartMessage({
@@ -484,7 +497,12 @@ export default function CartPage() {
 
       if (maxStock <= 0) {
         setErrorMessage(
-          `${item.name} - ${item.color || "Selected colour"} - ${item.size} දැනට out of stock.`
+          `${item.name} - ${
+            item.color ||
+            "Selected colour"
+          } - ${
+            item.size
+          } දැනට out of stock.`
         );
 
         return false;
@@ -495,7 +513,12 @@ export default function CartPage() {
         maxStock
       ) {
         setErrorMessage(
-          `${item.name} - ${item.color || "Selected colour"} - ${item.size} stock limit එක ${maxStock}යි.`
+          `${item.name} - ${
+            item.color ||
+            "Selected colour"
+          } - ${
+            item.size
+          } stock limit එක ${maxStock}යි.`
         );
 
         return false;
@@ -636,7 +659,8 @@ export default function CartPage() {
     }
 
     const currentOrderId =
-      orderId || generateOrderId();
+      orderId ||
+      generateOrderId();
 
     if (!orderId) {
       localStorage.setItem(
@@ -798,6 +822,11 @@ Thank you,
       "_blank",
       "noopener,noreferrer"
     );
+
+    window.setTimeout(() => {
+      window.location.href =
+        "/order-success";
+    }, 500);
   }
 
   if (isLoading) {
@@ -1195,8 +1224,7 @@ Thank you,
                       event
                     ) =>
                       setCustomerName(
-                        event.target
-                          .value
+                        event.target.value
                       )
                     }
                     placeholder="ඔයාගේ සම්පූර්ණ නම"
@@ -1220,8 +1248,7 @@ Thank you,
                       event
                     ) =>
                       setPrimaryPhone(
-                        event.target
-                          .value
+                        event.target.value
                       )
                     }
                     placeholder="07XXXXXXXX"
@@ -1245,8 +1272,7 @@ Thank you,
                       event
                     ) =>
                       setAlternativePhone(
-                        event.target
-                          .value
+                        event.target.value
                       )
                     }
                     placeholder="07XXXXXXXX"
@@ -1270,8 +1296,7 @@ Thank you,
                       event
                     ) =>
                       setDistrict(
-                        event.target
-                          .value
+                        event.target.value
                       )
                     }
                     className="w-full border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-black"
@@ -1313,8 +1338,7 @@ Thank you,
                       event
                     ) =>
                       setAddress(
-                        event.target
-                          .value
+                        event.target.value
                       )
                     }
                     rows={4}
@@ -1335,8 +1359,7 @@ Thank you,
                       event
                     ) =>
                       setNote(
-                        event.target
-                          .value
+                        event.target.value
                       )
                     }
                     rows={3}
