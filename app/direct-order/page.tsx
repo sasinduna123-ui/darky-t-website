@@ -1,10 +1,11 @@
 "use client";
 
 import {
-  FormEvent,
+  type FormEvent,
   useEffect,
   useState,
 } from "react";
+
 import { FaWhatsapp } from "react-icons/fa";
 
 type DirectOrderItem = {
@@ -20,6 +21,29 @@ type DirectOrderItem = {
   quantity: number;
 
   maxStock?: number;
+};
+
+type SavedOrder = {
+  orderNumber: string;
+  orderType: "direct";
+
+  customerName: string;
+  primaryPhone: string;
+  alternativePhone: string;
+
+  district: string;
+  deliveryAddress: string;
+  note: string;
+
+  totalQuantity: number;
+  subtotal: number;
+  deliveryFee: number;
+  finalTotal: number;
+
+  deliveryPending: boolean;
+  createdAt: string;
+
+  items: DirectOrderItem[];
 };
 
 const districts = [
@@ -50,58 +74,141 @@ const districts = [
   "Vavuniya",
 ];
 
+function cleanPhoneNumber(
+  value: string
+) {
+  return value.replace(/\D/g, "");
+}
+
+function formatSriLankanPhone(
+  value: string
+) {
+  const cleanedNumber =
+    cleanPhoneNumber(value);
+
+  if (
+    cleanedNumber.startsWith("94")
+  ) {
+    return `+${cleanedNumber}`;
+  }
+
+  if (
+    cleanedNumber.startsWith("0")
+  ) {
+    return `+94${cleanedNumber.slice(
+      1
+    )}`;
+  }
+
+  return `+94${cleanedNumber}`;
+}
+
+function isValidPhone(
+  value: string
+) {
+  const cleanedNumber =
+    cleanPhoneNumber(value);
+
+  if (
+    cleanedNumber.startsWith("94")
+  ) {
+    return cleanedNumber.length === 11;
+  }
+
+  if (
+    cleanedNumber.startsWith("0")
+  ) {
+    return cleanedNumber.length === 10;
+  }
+
+  return cleanedNumber.length === 9;
+}
+
+function createOrderNumber() {
+  const now = new Date();
+
+  const year = now
+    .getFullYear()
+    .toString()
+    .slice(-2);
+
+  const month = String(
+    now.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    now.getDate()
+  ).padStart(2, "0");
+
+  const timePart = Date.now()
+    .toString()
+    .slice(-6);
+
+  const randomPart = Math.floor(
+    100 + Math.random() * 900
+  );
+
+  return `DT-D-${year}${month}${day}-${timePart}${randomPart}`;
+}
+
 export default function DirectOrderPage() {
-  const [orderItem, setOrderItem] =
-    useState<DirectOrderItem | null>(null);
+  const [
+    orderItem,
+    setOrderItem,
+  ] =
+    useState<DirectOrderItem | null>(
+      null
+    );
 
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
 
-  const [orderId, setOrderId] =
-    useState("");
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
-  const [customerName, setCustomerName] =
-    useState("");
+  const [
+    customerName,
+    setCustomerName,
+  ] = useState("");
 
-  const [primaryPhone, setPrimaryPhone] =
-    useState("");
+  const [
+    primaryPhone,
+    setPrimaryPhone,
+  ] = useState("");
 
   const [
     alternativePhone,
     setAlternativePhone,
   ] = useState("");
 
-  const [district, setDistrict] =
-    useState("");
+  const [
+    district,
+    setDistrict,
+  ] = useState("");
 
-  const [address, setAddress] =
-    useState("");
+  const [
+    address,
+    setAddress,
+  ] = useState("");
 
-  const [note, setNote] =
-    useState("");
+  const [
+    note,
+    setNote,
+  ] = useState("");
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-  function generateOrderId(): string {
-    const now = new Date();
-
-    const year = now.getFullYear();
-
-    const month = String(
-      now.getMonth() + 1
-    ).padStart(2, "0");
-
-    const day = String(
-      now.getDate()
-    ).padStart(2, "0");
-
-    const randomNumber = Math.floor(
-      1000 + Math.random() * 9000
-    );
-
-    return `DT-${year}${month}${day}-${randomNumber}`;
-  }
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState("");
 
   useEffect(() => {
     try {
@@ -115,29 +222,38 @@ export default function DirectOrderPage() {
         return;
       }
 
-      const parsedOrder: DirectOrderItem =
+      const parsedOrder =
         JSON.parse(savedOrder);
 
-      setOrderItem(parsedOrder);
-
-      const savedOrderId =
-        localStorage.getItem(
-          "darky-direct-order-id"
-        );
-
-      if (savedOrderId) {
-        setOrderId(savedOrderId);
-      } else {
-        const newOrderId =
-          generateOrderId();
-
-        localStorage.setItem(
-          "darky-direct-order-id",
-          newOrderId
-        );
-
-        setOrderId(newOrderId);
+      if (
+        !parsedOrder ||
+        typeof parsedOrder !==
+          "object"
+      ) {
+        setOrderItem(null);
+        return;
       }
+
+      const preparedItem:
+        DirectOrderItem = {
+        ...parsedOrder,
+
+        quantity: Math.max(
+          1,
+          Number(
+            parsedOrder.quantity
+          ) || 1
+        ),
+
+        maxStock:
+          Number(
+            parsedOrder.maxStock
+          ) || undefined,
+      };
+
+      setOrderItem(
+        preparedItem
+      );
     } catch {
       setOrderItem(null);
     } finally {
@@ -145,92 +261,127 @@ export default function DirectOrderPage() {
     }
   }, []);
 
-  function cleanPhoneNumber(
-    value: string
-  ): string {
-    return value.replace(/\D/g, "");
-  }
+  const subtotal =
+    orderItem
+      ? Number(orderItem.price) *
+        Number(
+          orderItem.quantity
+        )
+      : 0;
 
-  function formatSriLankanPhone(
-    value: string
-  ): string {
-    const cleanedNumber =
-      cleanPhoneNumber(value);
+  const totalQuantity =
+    orderItem
+      ? Number(
+          orderItem.quantity
+        )
+      : 0;
 
-    if (
-      cleanedNumber.startsWith("94")
-    ) {
-      return `+${cleanedNumber}`;
-    }
+  const hasFixedDeliveryFee =
+    totalQuantity > 0 &&
+    totalQuantity <= 5;
 
-    if (
-      cleanedNumber.startsWith("0")
-    ) {
-      return `+94${cleanedNumber.slice(1)}`;
-    }
+  const deliveryFee =
+    hasFixedDeliveryFee
+      ? 350
+      : 0;
 
-    return `+94${cleanedNumber}`;
-  }
+  const finalTotal =
+    hasFixedDeliveryFee
+      ? subtotal +
+        deliveryFee
+      : subtotal;
 
-  function isValidPhone(
-    value: string
-  ): boolean {
-    const cleanedNumber =
-      cleanPhoneNumber(value);
-
-    if (
-      cleanedNumber.startsWith("94")
-    ) {
-      return cleanedNumber.length === 11;
-    }
-
-    if (
-      cleanedNumber.startsWith("0")
-    ) {
-      return cleanedNumber.length === 10;
-    }
-
-    return cleanedNumber.length === 9;
-  }
-
-  function validateForm(): boolean {
+  function updateQuantity(
+    nextQuantity: number
+  ) {
     if (!orderItem) {
-      setErrorMessage(
-        "Order product එක හොයාගන්න බැහැ."
-      );
-
-      return false;
+      return;
     }
 
     const maxStock =
-      Number(orderItem.maxStock);
+      Number(
+        orderItem.maxStock
+      ) || 999999;
+
+    const safeQuantity =
+      Math.min(
+        maxStock,
+        Math.max(
+          1,
+          nextQuantity
+        )
+      );
+
+    const updatedItem = {
+      ...orderItem,
+      quantity:
+        safeQuantity,
+    };
+
+    setOrderItem(
+      updatedItem
+    );
+
+    localStorage.setItem(
+      "darky-direct-order",
+      JSON.stringify(
+        updatedItem
+      )
+    );
 
     if (
-      Number.isFinite(maxStock) &&
-      maxStock > 0 &&
-      orderItem.quantity > maxStock
+      nextQuantity > maxStock
     ) {
       setErrorMessage(
-        `${orderItem.name} stock limit එක ${maxStock}යි.`
+        `Available stock එක ${maxStock}යි.`
+      );
+    } else {
+      setErrorMessage("");
+    }
+  }
+
+  function validateForm() {
+    if (!orderItem) {
+      setErrorMessage(
+        "Direct order product එක හොයාගන්න බැහැ."
       );
 
       return false;
     }
 
     if (
-      !Number.isFinite(
-        Number(orderItem.quantity)
-      ) ||
-      orderItem.quantity < 1
+      !orderItem.id?.trim()
     ) {
       setErrorMessage(
-        "Order quantity එක invalid."
+        "Product ID එක missing. Product page එකෙන් නැවත ORDER NOW කරන්න."
       );
 
       return false;
     }
 
-    if (!customerName.trim()) {
+    if (
+      !orderItem.colorSlug?.trim()
+    ) {
+      setErrorMessage(
+        "Product colour data එක missing. Product page එකෙන් නැවත ORDER NOW කරන්න."
+      );
+
+      return false;
+    }
+
+    if (
+      !orderItem.size?.trim()
+    ) {
+      setErrorMessage(
+        "Product size එක missing."
+      );
+
+      return false;
+    }
+
+    if (
+      !customerName.trim()
+    ) {
       setErrorMessage(
         "Customer name එක ඇතුළත් කරන්න."
       );
@@ -238,15 +389,12 @@ export default function DirectOrderPage() {
       return false;
     }
 
-    if (!primaryPhone.trim()) {
-      setErrorMessage(
-        "Primary phone number එක ඇතුළත් කරන්න."
-      );
-
-      return false;
-    }
-
-    if (!isValidPhone(primaryPhone)) {
+    if (
+      !primaryPhone.trim() ||
+      !isValidPhone(
+        primaryPhone
+      )
+    ) {
       setErrorMessage(
         "හරි primary phone number එකක් ඇතුළත් කරන්න."
       );
@@ -254,15 +402,8 @@ export default function DirectOrderPage() {
       return false;
     }
 
-    if (!alternativePhone.trim()) {
-      setErrorMessage(
-        "Alternative phone number එක ඇතුළත් කරන්න."
-      );
-
-      return false;
-    }
-
     if (
+      !alternativePhone.trim() ||
       !isValidPhone(
         alternativePhone
       )
@@ -275,7 +416,9 @@ export default function DirectOrderPage() {
     }
 
     if (
-      cleanPhoneNumber(primaryPhone) ===
+      cleanPhoneNumber(
+        primaryPhone
+      ) ===
       cleanPhoneNumber(
         alternativePhone
       )
@@ -308,53 +451,32 @@ export default function DirectOrderPage() {
     return true;
   }
 
-  function sendWhatsAppOrder(
-    event: FormEvent<HTMLFormElement>
+  async function placeDirectOrder(
+    event:
+      FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
-    if (!validateForm()) {
+    if (
+      isSubmitting ||
+      !validateForm() ||
+      !orderItem
+    ) {
       return;
     }
 
-    if (!orderItem) {
-      return;
-    }
+    setIsSubmitting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
 
-    const currentOrderItem =
-      orderItem;
-
-    const currentOrderId =
-      orderId || generateOrderId();
-
-    if (!orderId) {
-      localStorage.setItem(
-        "darky-direct-order-id",
-        currentOrderId
+    const whatsappWindow =
+      window.open(
+        "",
+        "_blank"
       );
 
-      setOrderId(currentOrderId);
-    }
-
-    const subtotal =
-      currentOrderItem.price *
-      currentOrderItem.quantity;
-
-    const hasFixedDeliveryFee =
-      currentOrderItem.quantity > 0 &&
-      currentOrderItem.quantity <= 5;
-
-    const deliveryFee =
-      hasFixedDeliveryFee
-        ? 350
-        : 0;
-
-    const finalTotal =
-      subtotal + deliveryFee;
-
-    const selectedColour =
-      currentOrderItem.color?.trim() ||
-      "Not selected";
+    const orderNumber =
+      createOrderNumber();
 
     const formattedPrimaryPhone =
       formatSriLankanPhone(
@@ -366,32 +488,137 @@ export default function DirectOrderPage() {
         alternativePhone
       );
 
-    const deliveryDetails =
-      hasFixedDeliveryFee
-        ? `• Delivery Fee: Rs. ${deliveryFee.toLocaleString()}
-• *Final Total: Rs. ${finalTotal.toLocaleString()}*`
-        : `• Delivery Fee: _To be confirmed through WhatsApp_
-• Final Total: _To be confirmed after calculating the delivery fee_`;
+    try {
+      const response =
+        await fetch(
+          "/api/orders",
+          {
+            method: "POST",
 
-    const whatsappMessage = `*DARKY T - NEW ORDER*
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-*Order ID: ${currentOrderId}*
+            body:
+              JSON.stringify({
+                order: {
+                  orderNumber,
+
+                  orderType:
+                    "direct",
+
+                  customerName:
+                    customerName.trim(),
+
+                  primaryPhone:
+                    formattedPrimaryPhone,
+
+                  alternativePhone:
+                    formattedAlternativePhone,
+
+                  district:
+                    district.trim(),
+
+                  deliveryAddress:
+                    address.trim(),
+
+                  note:
+                    note.trim(),
+
+                  items: [
+                    {
+                      productId:
+                        orderItem.id,
+
+                      productName:
+                        orderItem.name,
+
+                      colourName:
+                        orderItem.color?.trim() ||
+                        "Not selected",
+
+                      colourSlug:
+                        orderItem.colorSlug?.trim() ||
+                        "",
+
+                      size:
+                        orderItem.size,
+
+                      quantity:
+                        Number(
+                          orderItem.quantity
+                        ),
+
+                      unitPrice:
+                        Number(
+                          orderItem.price
+                        ),
+                    },
+                  ],
+                },
+              }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "Order එක database එකට save කරන්න බැරි වුණා."
+        );
+      }
+
+      const savedOrderNumber =
+        result.orderNumber ||
+        orderNumber;
+
+      const databaseDeliveryFee =
+        Number(
+          result.deliveryFee
+        ) || 0;
+
+      const databaseFinalTotal =
+        Number(
+          result.finalTotal
+        ) || subtotal;
+
+      const selectedColour =
+        orderItem.color?.trim() ||
+        "Not selected";
+
+      const whatsappMessage = `*DARKY T - NEW DIRECT ORDER*
+
+*Order Number: ${savedOrderNumber}*
 
 Hello DARKY T,
 
-I would like to place the following order.
+I would like to place the following direct order.
 
 --------------------------------
-*ORDER DETAILS*
+*PRODUCT DETAILS*
 --------------------------------
 
-• Product: *${currentOrderItem.name}*
+• Product: ${orderItem.name}
 • Colour: ${selectedColour}
-• Size: ${currentOrderItem.size}
-• Quantity: ${currentOrderItem.quantity}
-• Unit Price: Rs. ${currentOrderItem.price.toLocaleString()}
+• Size: ${orderItem.size}
+• Quantity: ${orderItem.quantity}
+• Unit Price: Rs. ${Number(
+        orderItem.price
+      ).toLocaleString()}
 • Subtotal: Rs. ${subtotal.toLocaleString()}
-${deliveryDetails}
+• Delivery Fee: ${
+        hasFixedDeliveryFee
+          ? `Rs. ${databaseDeliveryFee.toLocaleString()}`
+          : "To be confirmed"
+      }
+• Final Total: ${
+        hasFixedDeliveryFee
+          ? `Rs. ${databaseFinalTotal.toLocaleString()}`
+          : "To be confirmed"
+      }
 
 --------------------------------
 *CUSTOMER DETAILS*
@@ -411,98 +638,114 @@ ${deliveryDetails}
 Thank you,
 *DARKY T*`;
 
-    const lastOrderData = {
-      orderId: currentOrderId,
-      orderType: "direct",
+      const whatsappNumber =
+        "94788809678";
 
-      customerName:
-        customerName.trim(),
+      const whatsappUrl =
+        `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+          whatsappMessage
+        )}`;
 
-      primaryPhone:
-        formattedPrimaryPhone,
+      const lastOrder:
+        SavedOrder = {
+        orderNumber:
+          savedOrderNumber,
 
-      alternativePhone:
-        formattedAlternativePhone,
+        orderType:
+          "direct",
 
-      district:
-        district.trim(),
+        customerName:
+          customerName.trim(),
 
-      address:
-        address.trim(),
+        primaryPhone:
+          formattedPrimaryPhone,
 
-      note:
-        note.trim() ||
-        "No special note",
+        alternativePhone:
+          formattedAlternativePhone,
 
-      items: [
-        {
-          ...currentOrderItem,
-          color: selectedColour,
-        },
-      ],
+        district:
+          district.trim(),
 
-      totalQuantity:
-        currentOrderItem.quantity,
+        deliveryAddress:
+          address.trim(),
 
-      subtotal,
+        note:
+          note.trim(),
 
-      deliveryFee:
-        hasFixedDeliveryFee
-          ? deliveryFee
-          : null,
+        totalQuantity,
 
-      finalTotal:
-        hasFixedDeliveryFee
-          ? finalTotal
-          : null,
+        subtotal,
 
-      createdAt:
-        new Date().toISOString(),
-    };
+        deliveryFee:
+          databaseDeliveryFee,
 
-    localStorage.setItem(
-      "darky-last-order",
-      JSON.stringify(
-        lastOrderData
-      )
-    );
+        finalTotal:
+          databaseFinalTotal,
 
-    const whatsappNumber =
-      "94788809678";
+        deliveryPending:
+          !hasFixedDeliveryFee,
 
-    const whatsappUrl =
-      `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-        whatsappMessage
-      )}`;
+        createdAt:
+          new Date().toISOString(),
 
-    window.open(
-      whatsappUrl,
-      "_blank",
-      "noopener,noreferrer"
-    );
+        items: [
+          orderItem,
+        ],
+      };
 
-    window.setTimeout(() => {
-      window.location.href =
-        "/order-success";
-    }, 500);
-  }
+      localStorage.setItem(
+        "darky-last-order",
+        JSON.stringify(
+          lastOrder
+        )
+      );
 
-  function removeDirectOrder() {
-    localStorage.removeItem(
-      "darky-direct-order"
-    );
+      localStorage.setItem(
+        "darky-last-order-number",
+        savedOrderNumber
+      );
 
-    localStorage.removeItem(
-      "darky-direct-order-id"
-    );
+      localStorage.removeItem(
+        "darky-direct-order"
+      );
 
-    window.location.href =
-      "/#shop";
+      setSuccessMessage(
+        `${savedOrderNumber} direct order එක database එකට save කළා.`
+      );
+
+      if (whatsappWindow) {
+        whatsappWindow.location.href =
+          whatsappUrl;
+      } else {
+        window.open(
+          whatsappUrl,
+          "_blank",
+          "noopener,noreferrer"
+        );
+      }
+
+      window.setTimeout(() => {
+        window.location.href =
+          "/order-success";
+      }, 1000);
+    } catch (error) {
+      if (whatsappWindow) {
+        whatsappWindow.close();
+      }
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Order එක save කරන්න බැරි වුණා."
+      );
+
+      setIsSubmitting(false);
+    }
   }
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-white px-6 text-black">
+      <main className="flex min-h-screen items-center justify-center bg-white text-black">
         <p className="font-bold">
           Loading order...
         </p>
@@ -515,16 +758,16 @@ Thank you,
       <main className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-black">
         <div>
           <h1 className="text-4xl font-black">
-            ORDER NOT FOUND
+            NO DIRECT ORDER
           </h1>
 
           <p className="mt-4 text-gray-600">
-            Order කරන්න product එකක් තෝරලා නැහැ.
+            Product page එකෙන් product එකක් select කරලා ORDER NOW කරන්න.
           </p>
 
           <a
             href="/#shop"
-            className="mt-8 inline-block bg-black px-8 py-4 font-bold text-white transition hover:bg-gray-800"
+            className="mt-8 inline-block bg-black px-8 py-4 font-bold text-white"
           >
             BACK TO SHOP
           </a>
@@ -533,27 +776,13 @@ Thank you,
     );
   }
 
-  const currentOrderItem =
-    orderItem;
-
-  const subtotal =
-    currentOrderItem.price *
-    currentOrderItem.quantity;
-
-  const hasFixedDeliveryFee =
-    currentOrderItem.quantity > 0 &&
-    currentOrderItem.quantity <= 5;
-
-  const deliveryFee =
-    hasFixedDeliveryFee
-      ? 350
-      : 0;
-
-  const finalTotal =
-    subtotal + deliveryFee;
+  const maxStock =
+    Number(
+      orderItem.maxStock
+    ) || null;
 
   const selectedColour =
-    currentOrderItem.color?.trim() ||
+    orderItem.color?.trim() ||
     "Not selected";
 
   return (
@@ -567,176 +796,175 @@ Thank you,
         </a>
 
         <a
-          href="/#shop"
-          className="text-xs font-bold transition hover:text-gray-300 sm:text-sm"
+          href={`/product`}
+          onClick={(event) => {
+            event.preventDefault();
+            window.history.back();
+          }}
+          className="text-sm font-bold hover:text-gray-300"
         >
-          BACK TO SHOP
+          BACK
         </a>
       </nav>
 
       <section className="mx-auto max-w-6xl px-5 py-10 md:px-12 md:py-14">
         <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
-          DARKY T CHECKOUT
+          DARKY T DIRECT CHECKOUT
         </p>
 
         <h1 className="mt-3 text-4xl font-black md:text-5xl">
-          DELIVERY DETAILS
+          ORDER NOW
         </h1>
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-gray-300 bg-white px-5 py-4">
-          <span className="text-sm font-bold text-gray-500">
-            ORDER ID
-          </span>
+        <div className="mt-10 grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="h-fit bg-white p-6 shadow-sm md:p-8">
+            <div className="overflow-hidden bg-gray-100">
+              <img
+                src={
+                  orderItem.image
+                }
+                alt={
+                  orderItem.name
+                }
+                className="aspect-square w-full object-cover"
+              />
+            </div>
 
-          <span className="font-black tracking-wider">
-            {orderId ||
-              "Generating..."}
-          </span>
-        </div>
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-2">
-          <div className="bg-white p-6 shadow-sm md:p-8">
-            <h2 className="text-2xl font-black">
-              ORDER SUMMARY
+            <h2 className="mt-6 text-3xl font-black uppercase">
+              {orderItem.name}
             </h2>
 
-            <div className="mt-7 flex flex-col gap-6 sm:flex-row">
-              <div className="w-full overflow-hidden bg-gray-100 sm:w-44">
-                <img
-                  src={
-                    currentOrderItem.image
+            <div className="mt-5 space-y-3 text-gray-600">
+              <p>
+                Colour:{" "}
+                <strong className="text-black">
+                  {selectedColour}
+                </strong>
+              </p>
+
+              <p>
+                Size:{" "}
+                <strong className="text-black">
+                  {orderItem.size}
+                </strong>
+              </p>
+
+              <p>
+                Unit price:{" "}
+                <strong className="text-black">
+                  Rs.{" "}
+                  {Number(
+                    orderItem.price
+                  ).toLocaleString()}
+                </strong>
+              </p>
+
+              {maxStock !==
+                null && (
+                <p>
+                  Available stock:{" "}
+                  <strong className="text-black">
+                    {maxStock}
+                  </strong>
+                </p>
+              )}
+            </div>
+
+            <div className="mt-7">
+              <p className="mb-3 font-black">
+                QUANTITY
+              </p>
+
+              <div className="flex w-fit items-center border">
+                <button
+                  type="button"
+                  disabled={
+                    orderItem.quantity <=
+                    1
                   }
-                  alt={
-                    currentOrderItem.name
+                  onClick={() =>
+                    updateQuantity(
+                      orderItem.quantity -
+                        1
+                    )
                   }
-                  className="aspect-square h-full w-full object-cover"
-                />
-              </div>
+                  className="h-12 w-12 text-xl disabled:text-gray-300"
+                >
+                  −
+                </button>
 
-              <div className="flex-1">
-                <h3 className="text-2xl font-black">
-                  {
-                    currentOrderItem.name
+                <span className="flex h-12 w-14 items-center justify-center font-black">
+                  {orderItem.quantity}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={
+                    maxStock !==
+                      null &&
+                    orderItem.quantity >=
+                      maxStock
                   }
-                </h3>
-
-                <div className="mt-5 space-y-3 text-sm">
-                  <div className="flex justify-between gap-5 border-b pb-3">
-                    <span className="text-gray-500">
-                      Colour
-                    </span>
-
-                    <span className="font-bold">
-                      {selectedColour}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-5 border-b pb-3">
-                    <span className="text-gray-500">
-                      Size
-                    </span>
-
-                    <span className="font-bold">
-                      {
-                        currentOrderItem.size
-                      }
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-5 border-b pb-3">
-                    <span className="text-gray-500">
-                      Quantity
-                    </span>
-
-                    <span className="font-bold">
-                      {
-                        currentOrderItem.quantity
-                      }
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-5 border-b pb-3">
-                    <span className="text-gray-500">
-                      Unit Price
-                    </span>
-
-                    <span className="font-bold">
-                      Rs.{" "}
-                      {currentOrderItem.price.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-5 border-b pb-3">
-                    <span className="text-gray-500">
-                      Subtotal
-                    </span>
-
-                    <span className="font-bold">
-                      Rs.{" "}
-                      {subtotal.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-5 border-b pb-3">
-                    <span className="text-gray-500">
-                      Delivery Fee
-                    </span>
-
-                    <span className="text-right font-bold">
-                      {hasFixedDeliveryFee
-                        ? `Rs. ${deliveryFee.toLocaleString()}`
-                        : "Confirm via WhatsApp"}
-                    </span>
-                  </div>
-                </div>
+                  onClick={() =>
+                    updateQuantity(
+                      orderItem.quantity +
+                        1
+                    )
+                  }
+                  className="h-12 w-12 text-xl disabled:text-gray-300"
+                >
+                  +
+                </button>
               </div>
             </div>
 
-            <div className="mt-7 flex items-center justify-between border-y py-5">
-              <span className="text-lg font-bold">
-                {hasFixedDeliveryFee
-                  ? "FINAL TOTAL"
-                  : "SUBTOTAL"}
-              </span>
+            <div className="mt-7 space-y-4 border-t pt-6">
+              <div className="flex justify-between">
+                <span>
+                  Subtotal
+                </span>
 
-              <span className="text-2xl font-black">
-                Rs.{" "}
-                {(hasFixedDeliveryFee
-                  ? finalTotal
-                  : subtotal
-                ).toLocaleString()}
-              </span>
-            </div>
-
-            {!hasFixedDeliveryFee && (
-              <div className="mt-5 border border-orange-200 bg-orange-50 p-4 text-sm font-semibold leading-6 text-orange-700">
-                Products 5කට වැඩි නිසා delivery fee සහ final total එක WhatsApp එකෙන් confirm කරනවා.
+                <strong>
+                  Rs.{" "}
+                  {subtotal.toLocaleString()}
+                </strong>
               </div>
-            )}
 
-            <p className="mt-5 text-sm leading-6 text-gray-500">
-              Products 1–5 සඳහා delivery fee එක Rs. 350යි.
-            </p>
+              <div className="flex justify-between">
+                <span>
+                  Delivery
+                </span>
 
-            <button
-              type="button"
-              onClick={
-                removeDirectOrder
-              }
-              className="mt-6 w-full border border-red-600 px-5 py-3 font-bold text-red-600 transition hover:bg-red-600 hover:text-white"
-            >
-              REMOVE THIS ORDER
-            </button>
+                <strong>
+                  {hasFixedDeliveryFee
+                    ? `Rs. ${deliveryFee.toLocaleString()}`
+                    : "Confirm via WhatsApp"}
+                </strong>
+              </div>
+
+              <div className="flex justify-between border-t pt-4 text-xl font-black">
+                <span>
+                  {hasFixedDeliveryFee
+                    ? "TOTAL"
+                    : "SUBTOTAL"}
+                </span>
+
+                <span>
+                  Rs.{" "}
+                  {finalTotal.toLocaleString()}
+                </span>
+              </div>
+            </div>
           </div>
 
           <form
             onSubmit={
-              sendWhatsAppOrder
+              placeDirectOrder
             }
-            className="bg-white p-6 shadow-sm md:p-8"
+            className="h-fit bg-white p-6 shadow-sm md:p-8"
           >
             <h2 className="text-2xl font-black">
-              CUSTOMER DETAILS
+              DELIVERY DETAILS
             </h2>
 
             <p className="mt-3 text-sm text-gray-500">
@@ -750,43 +978,43 @@ Thank you,
                 </label>
 
                 <input
-                  type="text"
                   required
-                  value={customerName}
+                  value={
+                    customerName
+                  }
                   onChange={(event) =>
                     setCustomerName(
                       event.target.value
                     )
                   }
-                  placeholder="ඔයාගේ සම්පූර්ණ නම"
-                  autoComplete="name"
-                  className="w-full border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-bold">
-                  PRIMARY PHONE NUMBER *
+                  PRIMARY PHONE *
                 </label>
 
                 <input
                   type="tel"
                   required
-                  value={primaryPhone}
+                  value={
+                    primaryPhone
+                  }
                   onChange={(event) =>
                     setPrimaryPhone(
                       event.target.value
                     )
                   }
                   placeholder="07XXXXXXXX"
-                  autoComplete="tel"
-                  className="w-full border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-bold">
-                  ALTERNATIVE PHONE NUMBER *
+                  ALTERNATIVE PHONE *
                 </label>
 
                 <input
@@ -801,12 +1029,8 @@ Thank you,
                     )
                   }
                   placeholder="07XXXXXXXX"
-                  className="w-full border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                 />
-
-                <p className="mt-2 text-xs text-gray-500">
-                  Primary number එකට වෙනස් contact number එකක් දාන්න.
-                </p>
               </div>
 
               <div>
@@ -822,14 +1046,16 @@ Thank you,
                       event.target.value
                     )
                   }
-                  className="w-full border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-black"
+                  className="w-full border border-gray-300 bg-white px-4 py-3 outline-none focus:border-black"
                 >
                   <option value="">
                     Select district
                   </option>
 
                   {districts.map(
-                    (districtName) => (
+                    (
+                      districtName
+                    ) => (
                       <option
                         key={
                           districtName
@@ -854,54 +1080,66 @@ Thank you,
 
                 <textarea
                   required
+                  rows={4}
                   value={address}
                   onChange={(event) =>
                     setAddress(
                       event.target.value
                     )
                   }
-                  rows={4}
-                  placeholder="ගෙදර අංකය, පාර, නගරය"
-                  autoComplete="street-address"
-                  className="w-full resize-none border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  className="w-full resize-none border border-gray-300 px-4 py-3 outline-none focus:border-black"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-bold">
-                  SPECIAL NOTE — OPTIONAL
+                  SPECIAL NOTE
                 </label>
 
                 <textarea
+                  rows={3}
                   value={note}
                   onChange={(event) =>
                     setNote(
                       event.target.value
                     )
                   }
-                  rows={3}
-                  placeholder="Order එක ගැන විශේෂ සටහනක් තිබේ නම්"
-                  className="w-full resize-none border border-gray-300 px-4 py-3 outline-none transition focus:border-black"
+                  className="w-full resize-none border border-gray-300 px-4 py-3 outline-none focus:border-black"
                 />
               </div>
 
               {errorMessage && (
-                <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                <div className="border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-600">
                   {errorMessage}
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="border border-green-200 bg-green-50 p-4 text-sm font-bold text-green-700">
+                  {successMessage}
                 </div>
               )}
 
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-3 bg-green-600 px-6 py-4 font-black text-white transition hover:bg-green-700"
+                disabled={
+                  isSubmitting
+                }
+                className={`flex w-full items-center justify-center gap-3 px-6 py-4 font-black text-white ${
+                  isSubmitting
+                    ? "cursor-not-allowed bg-gray-500"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
               >
                 <FaWhatsapp className="text-2xl" />
 
-                SEND ORDER VIA WHATSAPP
+                {isSubmitting
+                  ? "SAVING ORDER..."
+                  : "PLACE DIRECT ORDER"}
               </button>
 
               <p className="text-center text-xs leading-5 text-gray-500">
-                Order ID, product, colour, size, delivery fee සහ customer details WhatsApp message එකට යනවා.
+                Direct order එක database එකට save වුණාට පස්සේ WhatsApp open වෙනවා.
               </p>
             </div>
           </form>

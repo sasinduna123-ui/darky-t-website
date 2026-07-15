@@ -1,10 +1,11 @@
 "use client";
 
 import {
-  FormEvent,
+  type FormEvent,
   useEffect,
   useState,
 } from "react";
+
 import { FaWhatsapp } from "react-icons/fa";
 
 type CartItem = {
@@ -22,9 +23,27 @@ type CartItem = {
   maxStock?: number;
 };
 
-type CartMessage = {
-  type: "success" | "warning" | "error";
-  text: string;
+type SavedOrder = {
+  orderNumber: string;
+  orderType: "cart";
+
+  customerName: string;
+  primaryPhone: string;
+  alternativePhone: string;
+
+  district: string;
+  deliveryAddress: string;
+  note: string;
+
+  totalQuantity: number;
+  subtotal: number;
+  deliveryFee: number;
+  finalTotal: number;
+
+  deliveryPending: boolean;
+  createdAt: string;
+
+  items: CartItem[];
 };
 
 const districts = [
@@ -55,128 +74,138 @@ const districts = [
   "Vavuniya",
 ];
 
+function cleanPhoneNumber(
+  value: string
+): string {
+  return value.replace(/\D/g, "");
+}
+
+function formatSriLankanPhone(
+  value: string
+): string {
+  const cleanedNumber =
+    cleanPhoneNumber(value);
+
+  if (
+    cleanedNumber.startsWith("94")
+  ) {
+    return `+${cleanedNumber}`;
+  }
+
+  if (
+    cleanedNumber.startsWith("0")
+  ) {
+    return `+94${cleanedNumber.slice(
+      1
+    )}`;
+  }
+
+  return `+94${cleanedNumber}`;
+}
+
+function isValidPhone(
+  value: string
+): boolean {
+  const cleanedNumber =
+    cleanPhoneNumber(value);
+
+  if (
+    cleanedNumber.startsWith("94")
+  ) {
+    return cleanedNumber.length === 11;
+  }
+
+  if (
+    cleanedNumber.startsWith("0")
+  ) {
+    return cleanedNumber.length === 10;
+  }
+
+  return cleanedNumber.length === 9;
+}
+
+function createOrderNumber() {
+  const now = new Date();
+
+  const year = now
+    .getFullYear()
+    .toString()
+    .slice(-2);
+
+  const month = String(
+    now.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    now.getDate()
+  ).padStart(2, "0");
+
+  const timePart = Date.now()
+    .toString()
+    .slice(-6);
+
+  const randomPart = Math.floor(
+    100 + Math.random() * 900
+  );
+
+  return `DT-${year}${month}${day}-${timePart}${randomPart}`;
+}
+
 export default function CartPage() {
-  const [cartItems, setCartItems] =
-    useState<CartItem[]>([]);
+  const [
+    cartItems,
+    setCartItems,
+  ] = useState<CartItem[]>([]);
 
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
 
-  const [orderId, setOrderId] =
-    useState("");
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
-  const [customerName, setCustomerName] =
-    useState("");
+  const [
+    customerName,
+    setCustomerName,
+  ] = useState("");
 
-  const [primaryPhone, setPrimaryPhone] =
-    useState("");
+  const [
+    primaryPhone,
+    setPrimaryPhone,
+  ] = useState("");
 
   const [
     alternativePhone,
     setAlternativePhone,
   ] = useState("");
 
-  const [district, setDistrict] =
-    useState("");
+  const [
+    district,
+    setDistrict,
+  ] = useState("");
 
-  const [address, setAddress] =
-    useState("");
+  const [
+    address,
+    setAddress,
+  ] = useState("");
 
-  const [note, setNote] =
-    useState("");
+  const [
+    note,
+    setNote,
+  ] = useState("");
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-  const [cartMessage, setCartMessage] =
-    useState<CartMessage | null>(null);
-
-  function generateOrderId(): string {
-    const now = new Date();
-
-    const year =
-      now.getFullYear();
-
-    const month = String(
-      now.getMonth() + 1
-    ).padStart(2, "0");
-
-    const day = String(
-      now.getDate()
-    ).padStart(2, "0");
-
-    const randomNumber =
-      Math.floor(
-        1000 + Math.random() * 9000
-      );
-
-    return `DT-${year}${month}${day}-${randomNumber}`;
-  }
-
-  function showCartMessage(
-    message: CartMessage
-  ) {
-    setCartMessage(message);
-
-    window.setTimeout(() => {
-      setCartMessage(null);
-    }, 3500);
-  }
-
-  function getSafeMaxStock(
-    item: CartItem
-  ): number {
-    const stock =
-      Number(item.maxStock);
-
-    if (
-      !Number.isFinite(stock) ||
-      stock <= 0
-    ) {
-      return Math.max(
-        1,
-        Number(item.quantity) || 1
-      );
-    }
-
-    return Math.floor(stock);
-  }
-
-  function normalizeCart(
-    items: CartItem[]
-  ): CartItem[] {
-    return items
-      .filter(
-        (item) =>
-          item &&
-          typeof item.id === "string" &&
-          typeof item.name === "string" &&
-          Number(item.price) >= 0
-      )
-      .map((item) => {
-        const maxStock =
-          getSafeMaxStock(item);
-
-        const safeQuantity =
-          Math.min(
-            maxStock,
-            Math.max(
-              1,
-              Math.floor(
-                Number(item.quantity) || 1
-              )
-            )
-          );
-
-        return {
-          ...item,
-          price:
-            Number(item.price) || 0,
-          quantity: safeQuantity,
-          maxStock,
-        };
-      });
-  }
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState("");
 
   useEffect(() => {
     try {
@@ -187,49 +216,42 @@ export default function CartPage() {
 
       if (!savedCart) {
         setCartItems([]);
-      } else {
-        const parsedCart =
-          JSON.parse(savedCart);
-
-        if (
-          Array.isArray(parsedCart)
-        ) {
-          const normalizedCart =
-            normalizeCart(parsedCart);
-
-          setCartItems(
-            normalizedCart
-          );
-
-          localStorage.setItem(
-            "darky-cart",
-            JSON.stringify(
-              normalizedCart
-            )
-          );
-        } else {
-          setCartItems([]);
-        }
+        return;
       }
 
-      const savedOrderId =
-        localStorage.getItem(
-          "darky-cart-order-id"
-        );
+      const parsedCart =
+        JSON.parse(savedCart);
 
-      if (savedOrderId) {
-        setOrderId(savedOrderId);
-      } else {
-        const newOrderId =
-          generateOrderId();
-
-        localStorage.setItem(
-          "darky-cart-order-id",
-          newOrderId
-        );
-
-        setOrderId(newOrderId);
+      if (
+        !Array.isArray(parsedCart)
+      ) {
+        setCartItems([]);
+        return;
       }
+
+      const preparedCart:
+        CartItem[] =
+        parsedCart.map(
+          (item: CartItem) => ({
+            ...item,
+
+            quantity: Math.max(
+              1,
+              Number(
+                item.quantity
+              ) || 1
+            ),
+
+            maxStock:
+              Number(
+                item.maxStock
+              ) || undefined,
+          })
+        );
+
+      setCartItems(
+        preparedCart
+      );
     } catch {
       setCartItems([]);
     } finally {
@@ -240,15 +262,12 @@ export default function CartPage() {
   function saveCart(
     updatedCart: CartItem[]
   ) {
-    const normalizedCart =
-      normalizeCart(updatedCart);
-
-    setCartItems(normalizedCart);
+    setCartItems(updatedCart);
 
     localStorage.setItem(
       "darky-cart",
       JSON.stringify(
-        normalizedCart
+        updatedCart
       )
     );
 
@@ -270,86 +289,88 @@ export default function CartPage() {
     }
 
     const maxStock =
-      getSafeMaxStock(
-        selectedItem
-      );
+      Number(
+        selectedItem.maxStock
+      ) || 999999;
 
     if (
       selectedItem.quantity >=
       maxStock
     ) {
-      showCartMessage({
-        type: "warning",
-        text: `${selectedItem.name} - ${
-          selectedItem.color ||
-          "Selected colour"
-        } - ${
-          selectedItem.size
-        } සඳහා maximum stock reached.`,
-      });
+      setErrorMessage(
+        `${selectedItem.name} සඳහා available stock එක ${maxStock}යි.`
+      );
 
       return;
     }
 
-    const updatedCart =
-      cartItems.map(
-        (item, itemIndex) =>
-          itemIndex === index
-            ? {
-                ...item,
-                quantity:
-                  item.quantity + 1,
-              }
-            : item
-      );
-
-    saveCart(updatedCart);
     setErrorMessage("");
-  }
 
-  function decreaseQuantity(
-    index: number
-  ) {
     const updatedCart =
       cartItems.map(
-        (item, itemIndex) =>
+        (
+          item,
+          itemIndex
+        ) =>
           itemIndex === index
             ? {
                 ...item,
+
                 quantity:
-                  Math.max(
-                    1,
-                    item.quantity - 1
+                  Math.min(
+                    maxStock,
+                    item.quantity +
+                      1
                   ),
               }
             : item
       );
 
     saveCart(updatedCart);
+  }
+
+  function decreaseQuantity(
+    index: number
+  ) {
     setErrorMessage("");
+
+    const updatedCart =
+      cartItems.map(
+        (
+          item,
+          itemIndex
+        ) =>
+          itemIndex === index
+            ? {
+                ...item,
+
+                quantity:
+                  Math.max(
+                    1,
+                    item.quantity -
+                      1
+                  ),
+              }
+            : item
+      );
+
+    saveCart(updatedCart);
   }
 
   function removeItem(
     index: number
   ) {
-    const removedItem =
-      cartItems[index];
-
     const updatedCart =
       cartItems.filter(
-        (_, itemIndex) =>
+        (
+          _,
+          itemIndex
+        ) =>
           itemIndex !== index
       );
 
     saveCart(updatedCart);
     setErrorMessage("");
-
-    if (removedItem) {
-      showCartMessage({
-        type: "success",
-        text: `${removedItem.name} cart එකෙන් remove කළා.`,
-      });
-    }
   }
 
   function clearCart() {
@@ -363,42 +384,33 @@ export default function CartPage() {
     }
 
     saveCart([]);
-
-    localStorage.removeItem(
-      "darky-cart-order-id"
-    );
-
-    const newOrderId =
-      generateOrderId();
-
-    localStorage.setItem(
-      "darky-cart-order-id",
-      newOrderId
-    );
-
-    setOrderId(newOrderId);
     setErrorMessage("");
-
-    showCartMessage({
-      type: "success",
-      text: "Cart එක clear කළා.",
-    });
   }
 
   const subtotal =
     cartItems.reduce(
-      (total, item) =>
+      (
+        total,
+        item
+      ) =>
         total +
-        item.price *
-          item.quantity,
+        Number(item.price) *
+          Number(
+            item.quantity
+          ),
       0
     );
 
   const totalQuantity =
     cartItems.reduce(
-      (total, item) =>
+      (
+        total,
+        item
+      ) =>
         total +
-        item.quantity,
+        Number(
+          item.quantity
+        ),
       0
     );
 
@@ -412,133 +424,12 @@ export default function CartPage() {
       : 0;
 
   const finalTotal =
-    subtotal + deliveryFee;
+    hasFixedDeliveryFee
+      ? subtotal +
+        deliveryFee
+      : subtotal;
 
-  function cleanPhoneNumber(
-    value: string
-  ): string {
-    return value.replace(
-      /\D/g,
-      ""
-    );
-  }
-
-  function formatSriLankanPhone(
-    value: string
-  ): string {
-    const cleanedNumber =
-      cleanPhoneNumber(value);
-
-    if (
-      cleanedNumber.startsWith(
-        "94"
-      )
-    ) {
-      return `+${cleanedNumber}`;
-    }
-
-    if (
-      cleanedNumber.startsWith(
-        "0"
-      )
-    ) {
-      return `+94${cleanedNumber.slice(
-        1
-      )}`;
-    }
-
-    return `+94${cleanedNumber}`;
-  }
-
-  function isValidPhone(
-    value: string
-  ): boolean {
-    const cleanedNumber =
-      cleanPhoneNumber(value);
-
-    if (
-      cleanedNumber.startsWith(
-        "94"
-      )
-    ) {
-      return (
-        cleanedNumber.length ===
-        11
-      );
-    }
-
-    if (
-      cleanedNumber.startsWith(
-        "0"
-      )
-    ) {
-      return (
-        cleanedNumber.length ===
-        10
-      );
-    }
-
-    return (
-      cleanedNumber.length === 9
-    );
-  }
-
-  function validateCartStock(): boolean {
-    for (
-      let index = 0;
-      index < cartItems.length;
-      index += 1
-    ) {
-      const item =
-        cartItems[index];
-
-      const maxStock =
-        getSafeMaxStock(item);
-
-      if (maxStock <= 0) {
-        setErrorMessage(
-          `${item.name} - ${
-            item.color ||
-            "Selected colour"
-          } - ${
-            item.size
-          } දැනට out of stock.`
-        );
-
-        return false;
-      }
-
-      if (
-        item.quantity >
-        maxStock
-      ) {
-        setErrorMessage(
-          `${item.name} - ${
-            item.color ||
-            "Selected colour"
-          } - ${
-            item.size
-          } stock limit එක ${maxStock}යි.`
-        );
-
-        return false;
-      }
-
-      if (
-        item.quantity < 1
-      ) {
-        setErrorMessage(
-          `${item.name} quantity එක invalid.`
-        );
-
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  function validateForm(): boolean {
+  function validateForm() {
     if (
       cartItems.length === 0
     ) {
@@ -549,10 +440,50 @@ export default function CartPage() {
       return false;
     }
 
-    if (
-      !validateCartStock()
+    for (
+      const item of cartItems
     ) {
-      return false;
+      if (
+        !item.id?.trim()
+      ) {
+        setErrorMessage(
+          `${item.name} product ID එක missing. Product එක cart එකෙන් remove කරලා නැවත add කරන්න.`
+        );
+
+        return false;
+      }
+
+      if (
+        !item.colorSlug?.trim()
+      ) {
+        setErrorMessage(
+          `${item.name} colour data එක missing. Product එක cart එකෙන් remove කරලා නැවත add කරන්න.`
+        );
+
+        return false;
+      }
+
+      if (
+        !item.size?.trim()
+      ) {
+        setErrorMessage(
+          `${item.name} size එක missing.`
+        );
+
+        return false;
+      }
+
+      if (
+        Number(
+          item.quantity
+        ) < 1
+      ) {
+        setErrorMessage(
+          `${item.name} quantity එක වැරදියි.`
+        );
+
+        return false;
+      }
     }
 
     if (
@@ -624,9 +555,7 @@ export default function CartPage() {
       return false;
     }
 
-    if (
-      !district.trim()
-    ) {
+    if (!district.trim()) {
       setErrorMessage(
         "District එක තෝරන්න."
       );
@@ -634,9 +563,7 @@ export default function CartPage() {
       return false;
     }
 
-    if (
-      !address.trim()
-    ) {
+    if (!address.trim()) {
       setErrorMessage(
         "Delivery address එක ඇතුළත් කරන්න."
       );
@@ -649,29 +576,36 @@ export default function CartPage() {
     return true;
   }
 
-  function sendWhatsAppOrder(
-    event: FormEvent<HTMLFormElement>
+  async function sendWhatsAppOrder(
+    event:
+      FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
-    if (!validateForm()) {
+    if (
+      isSubmitting ||
+      !validateForm()
+    ) {
       return;
     }
 
-    const currentOrderId =
-      orderId ||
-      generateOrderId();
+    setIsSubmitting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
 
-    if (!orderId) {
-      localStorage.setItem(
-        "darky-cart-order-id",
-        currentOrderId
+    /*
+      Fetch එක අවසන් වන තුරු WhatsApp popup එක
+      browser එකෙන් block නොවෙන්න empty tab එකක්
+      කලින් open කරනවා.
+    */
+    const whatsappWindow =
+      window.open(
+        "",
+        "_blank"
       );
 
-      setOrderId(
-        currentOrderId
-      );
-    }
+    const orderNumber =
+      createOrderNumber();
 
     const formattedPrimaryPhone =
       formatSriLankanPhone(
@@ -683,41 +617,152 @@ export default function CartPage() {
         alternativePhone
       );
 
-    const productDetails =
-      cartItems
-        .map(
-          (item, index) => {
-            const itemTotal =
-              item.price *
-              item.quantity;
+    try {
+      const orderPayload = {
+        orderNumber,
 
-            const selectedColour =
-              item.color?.trim() ||
-              "Not selected";
+        orderType:
+          "cart" as const,
 
-            return `*${index + 1}. ${item.name}*
+        customerName:
+          customerName.trim(),
+
+        primaryPhone:
+          formattedPrimaryPhone,
+
+        alternativePhone:
+          formattedAlternativePhone,
+
+        district:
+          district.trim(),
+
+        deliveryAddress:
+          address.trim(),
+
+        note:
+          note.trim(),
+
+        items:
+          cartItems.map(
+            (item) => ({
+              productId:
+                item.id,
+
+              productName:
+                item.name,
+
+              colourName:
+                item.color?.trim() ||
+                "Not selected",
+
+              colourSlug:
+                item.colorSlug?.trim() ||
+                "",
+
+              size:
+                item.size,
+
+              quantity:
+                Number(
+                  item.quantity
+                ),
+
+              unitPrice:
+                Number(
+                  item.price
+                ),
+            })
+          ),
+      };
+
+      const response =
+        await fetch(
+          "/api/orders",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                order:
+                  orderPayload,
+              }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "Order එක database එකට save කරන්න බැරි වුණා."
+        );
+      }
+
+      const savedOrderNumber =
+        result.orderNumber ||
+        orderNumber;
+
+      const databaseDeliveryFee =
+        Number(
+          result.deliveryFee
+        ) || 0;
+
+      const databaseFinalTotal =
+        Number(
+          result.finalTotal
+        ) || subtotal;
+
+      const productDetails =
+        cartItems
+          .map(
+            (
+              item,
+              index
+            ) => {
+              const itemTotal =
+                Number(
+                  item.price
+                ) *
+                Number(
+                  item.quantity
+                );
+
+              const selectedColour =
+                item.color?.trim() ||
+                "Not selected";
+
+              return `*${index + 1}. ${item.name}*
 
 • Colour: ${selectedColour}
 • Size: ${item.size}
 • Quantity: ${item.quantity}
-• Unit Price: Rs. ${item.price.toLocaleString()}
+• Unit Price: Rs. ${Number(
+                item.price
+              ).toLocaleString()}
 • Item Total: *Rs. ${itemTotal.toLocaleString()}*`;
-          }
-        )
-        .join(
-          "\n\n--------------------------------\n\n"
-        );
+            }
+          )
+          .join(
+            "\n\n--------------------------------\n\n"
+          );
 
-    const deliveryDetails =
-      hasFixedDeliveryFee
-        ? `• Delivery Fee: Rs. ${deliveryFee.toLocaleString()}
-• *Final Total: Rs. ${finalTotal.toLocaleString()}*`
-        : `• Delivery Fee: _To be confirmed through WhatsApp_
+      const deliveryDetails =
+        hasFixedDeliveryFee
+          ? `• Delivery Fee: Rs. ${databaseDeliveryFee.toLocaleString()}
+• *Final Total: Rs. ${databaseFinalTotal.toLocaleString()}*`
+          : `• Delivery Fee: _To be confirmed through WhatsApp_
 • Final Total: _To be confirmed after calculating the delivery fee_`;
 
-    const whatsappMessage = `*DARKY T - NEW CART ORDER*
+      const whatsappMessage = `*DARKY T - NEW CART ORDER*
 
-*Order ID: ${currentOrderId}*
+*Order Number: ${savedOrderNumber}*
 
 Hello DARKY T,
 
@@ -755,110 +800,130 @@ ${deliveryDetails}
 Thank you,
 *DARKY T*`;
 
-    const lastOrderData = {
-      orderId:
-        currentOrderId,
+      const whatsappNumber =
+        "94788809678";
 
-      orderType:
-        "cart",
+      const whatsappUrl =
+        `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+          whatsappMessage
+        )}`;
 
-      customerName:
-        customerName.trim(),
+      const lastOrder:
+        SavedOrder = {
+        orderNumber:
+          savedOrderNumber,
 
-      primaryPhone:
-        formattedPrimaryPhone,
+        orderType: "cart",
 
-      alternativePhone:
-        formattedAlternativePhone,
+        customerName:
+          customerName.trim(),
 
-      district:
-        district.trim(),
+        primaryPhone:
+          formattedPrimaryPhone,
 
-      address:
-        address.trim(),
+        alternativePhone:
+          formattedAlternativePhone,
 
-      note:
-        note.trim() ||
-        "No special note",
+        district:
+          district.trim(),
 
-      items:
-        cartItems,
+        deliveryAddress:
+          address.trim(),
 
-      totalQuantity,
+        note:
+          note.trim(),
 
-      subtotal,
+        totalQuantity,
 
-      deliveryFee:
-        hasFixedDeliveryFee
-          ? deliveryFee
-          : null,
+        subtotal,
 
-      finalTotal:
-        hasFixedDeliveryFee
-          ? finalTotal
-          : null,
+        deliveryFee:
+          databaseDeliveryFee,
 
-      createdAt:
-        new Date().toISOString(),
-    };
+        finalTotal:
+          databaseFinalTotal,
 
-    localStorage.setItem(
-      "darky-last-order",
-      JSON.stringify(
-        lastOrderData
-      )
-    );
+        deliveryPending:
+          !hasFixedDeliveryFee,
 
-    const whatsappNumber =
-      "94788809678";
+        createdAt:
+          new Date().toISOString(),
 
-    const whatsappUrl =
-      `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-        whatsappMessage
-      )}`;
+        items:
+          cartItems,
+      };
 
-    window.open(
-      whatsappUrl,
-      "_blank",
-      "noopener,noreferrer"
-    );
+      localStorage.setItem(
+        "darky-last-order",
+        JSON.stringify(
+          lastOrder
+        )
+      );
 
-    window.setTimeout(() => {
-      window.location.href =
-        "/order-success";
-    }, 500);
+      localStorage.setItem(
+        "darky-last-order-number",
+        savedOrderNumber
+      );
+
+      /*
+        Order එක database එකට save වුණාට පස්සේ
+        cart එක clear කරනවා.
+      */
+      saveCart([]);
+
+      setSuccessMessage(
+        `${savedOrderNumber} order එක database එකට save කළා. WhatsApp open කරනවා...`
+      );
+
+      if (whatsappWindow) {
+        whatsappWindow.location.href =
+          whatsappUrl;
+      } else {
+        window.open(
+          whatsappUrl,
+          "_blank",
+          "noopener,noreferrer"
+        );
+      }
+
+      window.setTimeout(() => {
+        window.location.href =
+          "/order-success";
+      }, 1000);
+    } catch (error) {
+      if (whatsappWindow) {
+        whatsappWindow.close();
+      }
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Order එක save කරන්න බැරි වුණා.";
+
+      setErrorMessage(
+        message
+      );
+
+      setIsSubmitting(false);
+    }
   }
 
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white px-6 text-black">
-        <p className="font-bold">
-          Loading cart...
-        </p>
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-black" />
+
+          <p className="mt-5 font-bold">
+            Loading cart...
+          </p>
+        </div>
       </main>
     );
   }
 
   return (
     <main className="min-h-screen bg-gray-100 text-black">
-      {cartMessage && (
-        <div className="fixed left-1/2 top-5 z-[100] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
-          <div
-            className={`border px-5 py-4 text-center text-sm font-bold shadow-xl ${
-              cartMessage.type ===
-              "success"
-                ? "border-green-300 bg-green-50 text-green-700"
-                : cartMessage.type ===
-                    "warning"
-                  ? "border-orange-300 bg-orange-50 text-orange-700"
-                  : "border-red-300 bg-red-50 text-red-700"
-            }`}
-          >
-            {cartMessage.text}
-          </div>
-        </div>
-      )}
-
       <nav className="flex items-center justify-between bg-black px-5 py-5 text-white md:px-12">
         <a
           href="/"
@@ -869,7 +934,7 @@ Thank you,
 
         <a
           href="/#shop"
-          className="text-xs font-bold transition hover:text-gray-300 sm:text-sm"
+          className="text-sm font-bold transition hover:text-gray-300"
         >
           CONTINUE SHOPPING
         </a>
@@ -884,20 +949,8 @@ Thank you,
           YOUR CART
         </h1>
 
-        {cartItems.length > 0 && (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-gray-300 bg-white px-5 py-4">
-            <span className="text-sm font-bold text-gray-500">
-              ORDER ID
-            </span>
-
-            <span className="font-black tracking-wider">
-              {orderId ||
-                "Generating..."}
-            </span>
-          </div>
-        )}
-
-        {cartItems.length === 0 ? (
+        {cartItems.length ===
+        0 ? (
           <div className="mt-10 bg-white p-10 text-center shadow-sm">
             <h2 className="text-3xl font-black">
               YOUR CART IS EMPTY
@@ -915,8 +968,9 @@ Thank you,
             </a>
           </div>
         ) : (
-          <div className="mt-8 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-6">
+              {/* Cart items */}
               <div className="bg-white p-6 shadow-sm md:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <h2 className="text-2xl font-black">
@@ -925,7 +979,9 @@ Thank you,
 
                   <button
                     type="button"
-                    onClick={clearCart}
+                    onClick={
+                      clearCart
+                    }
                     className="border border-red-600 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-600 hover:text-white"
                   >
                     CLEAR CART
@@ -939,25 +995,21 @@ Thank you,
                       index
                     ) => {
                       const itemTotal =
-                        item.price *
-                        item.quantity;
+                        Number(
+                          item.price
+                        ) *
+                        Number(
+                          item.quantity
+                        );
 
                       const selectedColour =
                         item.color?.trim() ||
                         "Not selected";
 
                       const maxStock =
-                        getSafeMaxStock(
-                          item
-                        );
-
-                      const isLowStock =
-                        maxStock > 0 &&
-                        maxStock <= 3;
-
-                      const hasReachedStockLimit =
-                        item.quantity >=
-                        maxStock;
+                        Number(
+                          item.maxStock
+                        ) || null;
 
                       return (
                         <div
@@ -965,7 +1017,7 @@ Thank you,
                           className="border-b pb-6 last:border-b-0 last:pb-0"
                         >
                           <div className="flex flex-col gap-5 sm:flex-row">
-                            <div className="relative w-full overflow-hidden bg-gray-100 sm:w-36">
+                            <div className="w-full overflow-hidden bg-gray-100 sm:w-36">
                               <img
                                 src={
                                   item.image
@@ -975,16 +1027,6 @@ Thank you,
                                 }
                                 className="aspect-square h-full w-full object-cover"
                               />
-
-                              {isLowStock && (
-                                <span className="absolute left-2 top-2 bg-black px-2 py-1 text-[10px] font-black text-white">
-                                  ONLY{" "}
-                                  {
-                                    maxStock
-                                  }{" "}
-                                  LEFT
-                                </span>
-                              )}
                             </div>
 
                             <div className="flex-1">
@@ -1019,24 +1061,23 @@ Thank you,
                                       Unit Price:{" "}
                                       <span className="font-bold text-black">
                                         Rs.{" "}
-                                        {item.price.toLocaleString()}
+                                        {Number(
+                                          item.price
+                                        ).toLocaleString()}
                                       </span>
                                     </p>
 
-                                    <p>
-                                      Available Stock:{" "}
-                                      <span
-                                        className={`font-bold ${
-                                          isLowStock
-                                            ? "text-orange-600"
-                                            : "text-black"
-                                        }`}
-                                      >
-                                        {
-                                          maxStock
-                                        }
-                                      </span>
-                                    </p>
+                                    {maxStock !==
+                                      null && (
+                                      <p>
+                                        Available:{" "}
+                                        <span className="font-bold text-black">
+                                          {
+                                            maxStock
+                                          }
+                                        </span>
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
 
@@ -1047,60 +1088,46 @@ Thank you,
                               </div>
 
                               <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-                                <div>
-                                  <div className="flex items-center border border-gray-300">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        decreaseQuantity(
-                                          index
-                                        )
-                                      }
-                                      disabled={
-                                        item.quantity <=
-                                        1
-                                      }
-                                      className={`h-11 w-11 text-xl ${
-                                        item.quantity <=
-                                        1
-                                          ? "cursor-not-allowed text-gray-300"
-                                          : "hover:bg-gray-100"
-                                      }`}
-                                    >
-                                      −
-                                    </button>
+                                <div className="flex items-center border border-gray-300">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      decreaseQuantity(
+                                        index
+                                      )
+                                    }
+                                    disabled={
+                                      item.quantity <=
+                                      1
+                                    }
+                                    className="h-11 w-11 text-xl transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+                                  >
+                                    −
+                                  </button>
 
-                                    <span className="flex h-11 min-w-12 items-center justify-center font-bold">
-                                      {
-                                        item.quantity
-                                      }
-                                    </span>
+                                  <span className="flex h-11 min-w-12 items-center justify-center font-bold">
+                                    {
+                                      item.quantity
+                                    }
+                                  </span>
 
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        increaseQuantity(
-                                          index
-                                        )
-                                      }
-                                      disabled={
-                                        hasReachedStockLimit
-                                      }
-                                      className={`h-11 w-11 text-xl ${
-                                        hasReachedStockLimit
-                                          ? "cursor-not-allowed text-gray-300"
-                                          : "hover:bg-gray-100"
-                                      }`}
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-
-                                  {hasReachedStockLimit && (
-                                    <p className="mt-2 text-xs font-bold text-orange-600">
-                                      Maximum stock reached
-                                    </p>
-                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      increaseQuantity(
+                                        index
+                                      )
+                                    }
+                                    disabled={
+                                      maxStock !==
+                                        null &&
+                                      item.quantity >=
+                                        maxStock
+                                    }
+                                    className="h-11 w-11 text-xl transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+                                  >
+                                    +
+                                  </button>
                                 </div>
 
                                 <button
@@ -1124,6 +1151,7 @@ Thank you,
                 </div>
               </div>
 
+              {/* Summary */}
               <div className="bg-white p-6 shadow-sm md:p-8">
                 <h2 className="text-2xl font-black">
                   ORDER SUMMARY
@@ -1174,10 +1202,7 @@ Thank you,
 
                     <span className="text-2xl font-black">
                       Rs.{" "}
-                      {(hasFixedDeliveryFee
-                        ? finalTotal
-                        : subtotal
-                      ).toLocaleString()}
+                      {finalTotal.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1194,6 +1219,7 @@ Thank you,
               </div>
             </div>
 
+            {/* Customer form */}
             <form
               onSubmit={
                 sendWhatsAppOrder
@@ -1220,11 +1246,10 @@ Thank you,
                     value={
                       customerName
                     }
-                    onChange={(
-                      event
-                    ) =>
+                    onChange={(event) =>
                       setCustomerName(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="ඔයාගේ සම්පූර්ණ නම"
@@ -1244,11 +1269,10 @@ Thank you,
                     value={
                       primaryPhone
                     }
-                    onChange={(
-                      event
-                    ) =>
+                    onChange={(event) =>
                       setPrimaryPhone(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="07XXXXXXXX"
@@ -1268,11 +1292,10 @@ Thank you,
                     value={
                       alternativePhone
                     }
-                    onChange={(
-                      event
-                    ) =>
+                    onChange={(event) =>
                       setAlternativePhone(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="07XXXXXXXX"
@@ -1291,12 +1314,13 @@ Thank you,
 
                   <select
                     required
-                    value={district}
-                    onChange={(
-                      event
-                    ) =>
+                    value={
+                      district
+                    }
+                    onChange={(event) =>
                       setDistrict(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     className="w-full border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-black"
@@ -1334,11 +1358,10 @@ Thank you,
                   <textarea
                     required
                     value={address}
-                    onChange={(
-                      event
-                    ) =>
+                    onChange={(event) =>
                       setAddress(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     rows={4}
@@ -1355,11 +1378,10 @@ Thank you,
 
                   <textarea
                     value={note}
-                    onChange={(
-                      event
-                    ) =>
+                    onChange={(event) =>
                       setNote(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     rows={3}
@@ -1369,22 +1391,39 @@ Thank you,
                 </div>
 
                 {errorMessage && (
-                  <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+                  <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-600">
                     {errorMessage}
+                  </div>
+                )}
+
+                {successMessage && (
+                  <div className="border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold leading-6 text-green-700">
+                    {
+                      successMessage
+                    }
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  className="flex w-full items-center justify-center gap-3 bg-green-600 px-6 py-4 font-black text-white transition hover:bg-green-700"
+                  disabled={
+                    isSubmitting
+                  }
+                  className={`flex w-full items-center justify-center gap-3 px-6 py-4 font-black text-white transition ${
+                    isSubmitting
+                      ? "cursor-not-allowed bg-gray-500"
+                      : "bg-green-600 hover:bg-green-700"
+                  }`}
                 >
                   <FaWhatsapp className="text-2xl" />
 
-                  SEND CART ORDER VIA WHATSAPP
+                  {isSubmitting
+                    ? "SAVING ORDER..."
+                    : "PLACE ORDER & OPEN WHATSAPP"}
                 </button>
 
                 <p className="text-center text-xs leading-5 text-gray-500">
-                  Order ID, cart products, colours, sizes, delivery fee සහ customer details WhatsApp message එකට යනවා.
+                  මුලින් order එක database එකට save වෙනවා. ඊට පස්සේ WhatsApp message එක open වෙනවා.
                 </p>
               </div>
             </form>

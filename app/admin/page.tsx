@@ -1,22 +1,25 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
 
 import {
-  products,
-  Product,
-  ProductSize,
-  ProductStock,
-  ProductType,
-  TshirtSizeGuide,
-  PantsSizeGuide,
-  defaultTshirtSizeGuide,
   defaultPantsSizeGuide,
+  defaultTshirtSizeGuide,
   productSizes,
+  type PantsSizeGuide,
+  type ProductSize,
+  type ProductStock,
+  type ProductType,
+  type TshirtSizeGuide,
 } from "@/app/data/products";
+
+type AdminMode =
+  | "create"
+  | "edit";
 
 type ColourVariantForm = {
   name: string;
@@ -25,9 +28,39 @@ type ColourVariantForm = {
   stock: ProductStock;
 };
 
-type AdminMode =
-  | "create"
-  | "edit";
+type DatabaseStockRow = {
+  size: ProductSize;
+  quantity: number;
+};
+
+type DatabaseVariantRow = {
+  id: string;
+  name: string;
+  slug: string;
+  hex: string;
+  images: unknown;
+  product_stock:
+    | DatabaseStockRow[]
+    | null;
+};
+
+type DatabaseProductRow = {
+  id: string;
+  slug: string;
+  name: string;
+  short_name: string;
+  product_type: ProductType;
+  price: number;
+  image: string;
+  images: unknown;
+  description: string;
+  features: unknown;
+  size_guide: unknown;
+  is_active: boolean;
+  product_variants:
+    | DatabaseVariantRow[]
+    | null;
+};
 
 const tshirtFeatures = [
   "240 GSM heavy cotton",
@@ -61,8 +94,14 @@ function createEmptyVariant(
   return {
     name,
     hex,
-    images: ["", "", "", ""],
-    stock: createEmptyStock(),
+    images: [
+      "",
+      "",
+      "",
+      "",
+    ],
+    stock:
+      createEmptyStock(),
   };
 }
 
@@ -92,68 +131,162 @@ function clonePantsSizeGuide(
   };
 }
 
-function createSlug(value: string) {
+function createSlug(
+  value: string
+) {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(
+      /[^a-z0-9\s-]/g,
+      ""
+    )
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 }
 
-function escapeText(value: string) {
-  return value
-    .trim()
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, " ");
-}
-
-function createImagePath(value: string) {
-  const trimmedValue =
+function createImagePath(
+  value: string
+) {
+  const cleanValue =
     value.trim();
 
-  if (!trimmedValue) {
+  if (!cleanValue) {
     return "";
   }
 
   if (
-    trimmedValue.startsWith(
+    cleanValue.startsWith(
       "/images/"
+    ) ||
+    cleanValue.startsWith(
+      "http://"
+    ) ||
+    cleanValue.startsWith(
+      "https://"
     )
   ) {
-    return trimmedValue;
+    return cleanValue;
   }
 
-  return `/images/${trimmedValue}`;
+  return `/images/${cleanValue}`;
 }
 
-function prepareVariantFromProduct(
-  variant: Product["variants"][number]
-): ColourVariantForm {
-  const preparedImages = [
-    ...variant.images,
-  ];
-
-  while (
-    preparedImages.length < 4
-  ) {
-    preparedImages.push("");
+function convertImages(
+  value: unknown
+): string[] {
+  if (!Array.isArray(value)) {
+    return [];
   }
 
-  return {
-    name: variant.name,
-    hex: variant.hex,
-    images: preparedImages,
-    stock: {
-      ...variant.stock,
-    },
-  };
+  return value.filter(
+    (item): item is string =>
+      typeof item === "string"
+  );
 }
 
-export default function AdminProductPage() {
-  const [adminMode, setAdminMode] =
-    useState<AdminMode>("create");
+function convertFeatures(
+  value: unknown
+): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(
+    (item): item is string =>
+      typeof item === "string"
+  );
+}
+
+function convertStock(
+  rows:
+    | DatabaseStockRow[]
+    | null
+): ProductStock {
+  const stock =
+    createEmptyStock();
+
+  if (!rows) {
+    return stock;
+  }
+
+  rows.forEach((row) => {
+    if (
+      productSizes.includes(
+        row.size
+      )
+    ) {
+      stock[row.size] =
+        Math.max(
+          0,
+          Number(
+            row.quantity
+          ) || 0
+        );
+    }
+  });
+
+  return stock;
+}
+
+export default function AdminPage() {
+  const [
+    adminPassword,
+    setAdminPassword,
+  ] = useState("");
+
+  const [
+    isLoggedIn,
+    setIsLoggedIn,
+  ] = useState(false);
+
+  const [
+    loginLoading,
+    setLoginLoading,
+  ] = useState(false);
+
+  const [
+    products,
+    setProducts,
+  ] =
+    useState<DatabaseProductRow[]>(
+      []
+    );
+
+  const [
+    productsLoading,
+    setProductsLoading,
+  ] = useState(false);
+
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
+
+  const [
+    deleting,
+    setDeleting,
+  ] = useState(false);
+
+  const [
+    message,
+    setMessage,
+  ] = useState("");
+
+  const [
+    messageType,
+    setMessageType,
+  ] = useState<
+    "success" | "error"
+  >("success");
+
+  const [
+    adminMode,
+    setAdminMode,
+  ] =
+    useState<AdminMode>(
+      "create"
+    );
 
   const [
     selectedExistingSlug,
@@ -169,16 +302,24 @@ export default function AdminProductPage() {
     productType,
     setProductType,
   ] =
-    useState<ProductType>("tshirt");
+    useState<ProductType>(
+      "tshirt"
+    );
 
-  const [name, setName] =
-    useState("");
+  const [
+    name,
+    setName,
+  ] = useState("");
 
-  const [shortName, setShortName] =
-    useState("");
+  const [
+    shortName,
+    setShortName,
+  ] = useState("");
 
-  const [price, setPrice] =
-    useState("3650");
+  const [
+    price,
+    setPrice,
+  ] = useState("3490");
 
   const [
     description,
@@ -204,20 +345,22 @@ export default function AdminProductPage() {
   const [
     tshirtSizeGuide,
     setTshirtSizeGuide,
-  ] = useState<TshirtSizeGuide>(
-    cloneTshirtSizeGuide(
-      defaultTshirtSizeGuide
-    )
-  );
+  ] =
+    useState<TshirtSizeGuide>(
+      cloneTshirtSizeGuide(
+        defaultTshirtSizeGuide
+      )
+    );
 
   const [
     pantsSizeGuide,
     setPantsSizeGuide,
-  ] = useState<PantsSizeGuide>(
-    clonePantsSizeGuide(
-      defaultPantsSizeGuide
-    )
-  );
+  ] =
+    useState<PantsSizeGuide>(
+      clonePantsSizeGuide(
+        defaultPantsSizeGuide
+      )
+    );
 
   const [
     selectedPreviewVariant,
@@ -228,17 +371,6 @@ export default function AdminProductPage() {
     selectedPreviewImage,
     setSelectedPreviewImage,
   ] = useState(0);
-
-  const [copied, setCopied] =
-    useState(false);
-
-  const [
-    deleteCodeCopied,
-    setDeleteCodeCopied,
-  ] = useState(false);
-
-  const [message, setMessage] =
-    useState("");
 
   const slug = useMemo(
     () => createSlug(name),
@@ -275,15 +407,56 @@ export default function AdminProductPage() {
     currentPreviewImages[0] ||
     mainImage;
 
+  const totalStock =
+    variants.reduce(
+      (
+        productTotal,
+        variant
+      ) =>
+        productTotal +
+        productSizes.reduce(
+          (
+            variantTotal,
+            size
+          ) =>
+            variantTotal +
+            Number(
+              variant.stock[
+                size
+              ] || 0
+            ),
+          0
+        ),
+      0
+    );
+
+  function showMessage(
+    text: string,
+    type:
+      | "success"
+      | "error" =
+      "success"
+  ) {
+    setMessage(text);
+    setMessageType(type);
+
+    window.setTimeout(() => {
+      setMessage("");
+    }, 5000);
+  }
+
   function resetForm() {
     setAdminMode("create");
     setSelectedExistingSlug("");
     setOriginalProductSlug("");
 
-    setProductType("tshirt");
+    setProductType(
+      "tshirt"
+    );
+
     setName("");
     setShortName("");
-    setPrice("3650");
+    setPrice("3490");
     setDescription("");
 
     setFeatures([
@@ -306,11 +479,13 @@ export default function AdminProductPage() {
       )
     );
 
-    setSelectedPreviewVariant(0);
-    setSelectedPreviewImage(0);
-    setCopied(false);
-    setDeleteCodeCopied(false);
-    setMessage("");
+    setSelectedPreviewVariant(
+      0
+    );
+
+    setSelectedPreviewImage(
+      0
+    );
   }
 
   function changeProductType(
@@ -319,17 +494,156 @@ export default function AdminProductPage() {
     setProductType(type);
 
     if (type === "tshirt") {
-      setPrice("3650");
+      setPrice("3490");
+
       setFeatures([
         ...tshirtFeatures,
       ]);
     } else {
       setPrice("4950");
+
       setFeatures([
         ...pantsFeatures,
       ]);
     }
   }
+
+  async function loadProducts(
+    password = adminPassword
+  ) {
+    setProductsLoading(true);
+
+    try {
+      const response =
+        await fetch(
+          "/api/admin/products",
+          {
+            method: "GET",
+
+            headers: {
+              "x-darky-admin-password":
+                password,
+            },
+
+            cache: "no-store",
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "Products load කරන්න බැරි වුණා."
+        );
+      }
+
+      setProducts(
+        result.products || []
+      );
+
+      return true;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Products load කරන්න බැරි වුණා.";
+
+      showMessage(
+        errorMessage,
+        "error"
+      );
+
+      return false;
+    } finally {
+      setProductsLoading(false);
+    }
+  }
+
+  async function loginAdmin() {
+    if (
+      !adminPassword.trim()
+    ) {
+      showMessage(
+        "Admin password එක ඇතුළත් කරන්න.",
+        "error"
+      );
+
+      return;
+    }
+
+    setLoginLoading(true);
+
+    const success =
+      await loadProducts(
+        adminPassword
+      );
+
+    setLoginLoading(false);
+
+    if (!success) {
+      setIsLoggedIn(false);
+      return;
+    }
+
+    setIsLoggedIn(true);
+
+    sessionStorage.setItem(
+      "darky-admin-password",
+      adminPassword
+    );
+
+    showMessage(
+      "Admin login successful."
+    );
+  }
+
+  function logoutAdmin() {
+    sessionStorage.removeItem(
+      "darky-admin-password"
+    );
+
+    setAdminPassword("");
+    setIsLoggedIn(false);
+    setProducts([]);
+    resetForm();
+  }
+
+  useEffect(() => {
+    const savedPassword =
+      sessionStorage.getItem(
+        "darky-admin-password"
+      );
+
+    if (!savedPassword) {
+      return;
+    }
+
+    setAdminPassword(
+      savedPassword
+    );
+
+    async function restoreLogin() {
+      setLoginLoading(true);
+
+      const success = await loadProducts(
+  savedPassword ?? ""
+);
+
+      setLoginLoading(false);
+
+      if (success) {
+        setIsLoggedIn(true);
+      } else {
+        sessionStorage.removeItem(
+          "darky-admin-password"
+        );
+      }
+    }
+
+    restoreLogin();
+  }, []);
 
   function loadExistingProduct(
     productSlug: string
@@ -340,6 +654,7 @@ export default function AdminProductPage() {
 
     if (!productSlug) {
       resetForm();
+      setAdminMode("edit");
       return;
     }
 
@@ -351,8 +666,9 @@ export default function AdminProductPage() {
       );
 
     if (!product) {
-      setMessage(
-        "Product එක හොයාගන්න බැහැ."
+      showMessage(
+        "Product එක හොයාගන්න බැහැ.",
+        "error"
       );
 
       return;
@@ -365,13 +681,14 @@ export default function AdminProductPage() {
     );
 
     setProductType(
-      product.productType
+      product.product_type
     );
 
     setName(product.name);
 
     setShortName(
-      product.shortName
+      product.short_name ||
+        product.name
     );
 
     setPrice(
@@ -379,72 +696,120 @@ export default function AdminProductPage() {
     );
 
     setDescription(
-      product.description
+      product.description || ""
     );
 
-    setFeatures([
-      ...product.features,
-    ]);
+    const loadedFeatures =
+      convertFeatures(
+        product.features
+      );
+
+    setFeatures(
+      loadedFeatures.length > 0
+        ? loadedFeatures
+        : [""]
+    );
+
+    const loadedVariants =
+      (
+        product.product_variants ||
+        []
+      ).map(
+        (variant) => {
+          const images =
+            convertImages(
+              variant.images
+            );
+
+          return {
+            name:
+              variant.name,
+
+            hex:
+              variant.hex ||
+              "#000000",
+
+            images:
+              images.length > 0
+                ? images
+                : [""],
+
+            stock:
+              convertStock(
+                variant.product_stock
+              ),
+          };
+        }
+      );
 
     setVariants(
-      product.variants.map(
-        prepareVariantFromProduct
-      )
+      loadedVariants.length > 0
+        ? loadedVariants
+        : [
+            createEmptyVariant(),
+          ]
     );
 
     if (
-      product.productType ===
+      product.product_type ===
       "tshirt"
     ) {
       setTshirtSizeGuide(
         cloneTshirtSizeGuide(
-          product.sizeGuide
+          product.size_guide as TshirtSizeGuide
         )
       );
     } else {
       setPantsSizeGuide(
         clonePantsSizeGuide(
-          product.sizeGuide
+          product.size_guide as PantsSizeGuide
         )
       );
     }
 
-    setSelectedPreviewVariant(0);
-    setSelectedPreviewImage(0);
+    setSelectedPreviewVariant(
+      0
+    );
 
-    setCopied(false);
-    setDeleteCodeCopied(false);
+    setSelectedPreviewImage(
+      0
+    );
 
-    setMessage(
+    showMessage(
       `${product.name} edit කරන්න load කළා.`
     );
   }
 
   function addNewColour() {
-    setVariants((current) => [
-      ...current,
-      createEmptyVariant(
-        `Colour ${
-          current.length + 1
-        }`
-      ),
-    ]);
+    setVariants(
+      (current) => [
+        ...current,
+        createEmptyVariant(
+          `Colour ${
+            current.length + 1
+          }`
+        ),
+      ]
+    );
 
     setSelectedPreviewVariant(
       variants.length
     );
 
-    setSelectedPreviewImage(0);
+    setSelectedPreviewImage(
+      0
+    );
   }
 
   function removeColour(
     index: number
   ) {
     if (
-      variants.length === 1
+      variants.length <= 1
     ) {
-      setMessage(
-        "Product එකකට අවම වශයෙන් colour එකක් තිබිය යුතුයි."
+      showMessage(
+        "අවම වශයෙන් colour එකක් තිබිය යුතුයි.",
+        "error"
       );
 
       return;
@@ -459,34 +824,46 @@ export default function AdminProductPage() {
       return;
     }
 
-    setVariants((current) =>
-      current.filter(
-        (_, variantIndex) =>
-          variantIndex !== index
-      )
+    setVariants(
+      (current) =>
+        current.filter(
+          (
+            _,
+            variantIndex
+          ) =>
+            variantIndex !==
+            index
+        )
     );
 
-    setSelectedPreviewVariant(0);
-    setSelectedPreviewImage(0);
+    setSelectedPreviewVariant(
+      0
+    );
+
+    setSelectedPreviewImage(
+      0
+    );
   }
 
   function updateVariantName(
     index: number,
     value: string
   ) {
-    setVariants((current) =>
-      current.map(
-        (
-          variant,
-          variantIndex
-        ) =>
-          variantIndex === index
-            ? {
-                ...variant,
-                name: value,
-              }
-            : variant
-      )
+    setVariants(
+      (current) =>
+        current.map(
+          (
+            variant,
+            variantIndex
+          ) =>
+            variantIndex ===
+            index
+              ? {
+                  ...variant,
+                  name: value,
+                }
+              : variant
+        )
     );
   }
 
@@ -494,19 +871,21 @@ export default function AdminProductPage() {
     index: number,
     value: string
   ) {
-    setVariants((current) =>
-      current.map(
-        (
-          variant,
-          variantIndex
-        ) =>
-          variantIndex === index
-            ? {
-                ...variant,
-                hex: value,
-              }
-            : variant
-      )
+    setVariants(
+      (current) =>
+        current.map(
+          (
+            variant,
+            variantIndex
+          ) =>
+            variantIndex ===
+            index
+              ? {
+                  ...variant,
+                  hex: value,
+                }
+              : variant
+        )
     );
   }
 
@@ -515,36 +894,37 @@ export default function AdminProductPage() {
     imageIndex: number,
     value: string
   ) {
-    setVariants((current) =>
-      current.map(
-        (
-          variant,
-          currentVariantIndex
-        ) => {
-          if (
-            currentVariantIndex !==
-            variantIndex
-          ) {
-            return variant;
+    setVariants(
+      (current) =>
+        current.map(
+          (
+            variant,
+            currentVariantIndex
+          ) => {
+            if (
+              currentVariantIndex !==
+              variantIndex
+            ) {
+              return variant;
+            }
+
+            return {
+              ...variant,
+
+              images:
+                variant.images.map(
+                  (
+                    image,
+                    currentImageIndex
+                  ) =>
+                    currentImageIndex ===
+                    imageIndex
+                      ? value
+                      : image
+                ),
+            };
           }
-
-          return {
-            ...variant,
-
-            images:
-              variant.images.map(
-                (
-                  image,
-                  currentImageIndex
-                ) =>
-                  currentImageIndex ===
-                  imageIndex
-                    ? value
-                    : image
-              ),
-          };
-        }
-      )
+        )
     );
 
     setSelectedPreviewVariant(
@@ -559,23 +939,25 @@ export default function AdminProductPage() {
   function addPhotoInput(
     variantIndex: number
   ) {
-    setVariants((current) =>
-      current.map(
-        (
-          variant,
-          currentVariantIndex
-        ) =>
-          currentVariantIndex ===
-          variantIndex
-            ? {
-                ...variant,
-                images: [
-                  ...variant.images,
-                  "",
-                ],
-              }
-            : variant
-      )
+    setVariants(
+      (current) =>
+        current.map(
+          (
+            variant,
+            currentVariantIndex
+          ) =>
+            currentVariantIndex ===
+            variantIndex
+              ? {
+                  ...variant,
+
+                  images: [
+                    ...variant.images,
+                    "",
+                  ],
+                }
+              : variant
+        )
     );
   }
 
@@ -583,43 +965,47 @@ export default function AdminProductPage() {
     variantIndex: number,
     imageIndex: number
   ) {
-    setVariants((current) =>
-      current.map(
-        (
-          variant,
-          currentVariantIndex
-        ) => {
-          if (
-            currentVariantIndex !==
-            variantIndex
-          ) {
-            return variant;
+    setVariants(
+      (current) =>
+        current.map(
+          (
+            variant,
+            currentVariantIndex
+          ) => {
+            if (
+              currentVariantIndex !==
+              variantIndex
+            ) {
+              return variant;
+            }
+
+            if (
+              variant.images
+                .length <= 1
+            ) {
+              return variant;
+            }
+
+            return {
+              ...variant,
+
+              images:
+                variant.images.filter(
+                  (
+                    _,
+                    currentImageIndex
+                  ) =>
+                    currentImageIndex !==
+                    imageIndex
+                ),
+            };
           }
-
-          if (
-            variant.images.length <= 1
-          ) {
-            return variant;
-          }
-
-          return {
-            ...variant,
-
-            images:
-              variant.images.filter(
-                (
-                  _,
-                  currentImageIndex
-                ) =>
-                  currentImageIndex !==
-                  imageIndex
-              ),
-          };
-        }
-      )
+        )
     );
 
-    setSelectedPreviewImage(0);
+    setSelectedPreviewImage(
+      0
+    );
   }
 
   function updateVariantStock(
@@ -635,26 +1021,27 @@ export default function AdminProductPage() {
         )
       );
 
-    setVariants((current) =>
-      current.map(
-        (
-          variant,
-          currentVariantIndex
-        ) =>
-          currentVariantIndex ===
-          variantIndex
-            ? {
-                ...variant,
+    setVariants(
+      (current) =>
+        current.map(
+          (
+            variant,
+            currentVariantIndex
+          ) =>
+            currentVariantIndex ===
+            variantIndex
+              ? {
+                  ...variant,
 
-                stock: {
-                  ...variant.stock,
+                  stock: {
+                    ...variant.stock,
 
-                  [size]:
-                    stockValue,
-                },
-              }
-            : variant
-      )
+                    [size]:
+                      stockValue,
+                  },
+                }
+              : variant
+        )
     );
   }
 
@@ -662,40 +1049,49 @@ export default function AdminProductPage() {
     index: number,
     value: string
   ) {
-    setFeatures((current) =>
-      current.map(
-        (
-          feature,
-          featureIndex
-        ) =>
-          featureIndex === index
-            ? value
-            : feature
-      )
+    setFeatures(
+      (current) =>
+        current.map(
+          (
+            feature,
+            featureIndex
+          ) =>
+            featureIndex ===
+            index
+              ? value
+              : feature
+        )
     );
   }
 
   function addFeature() {
-    setFeatures((current) => [
-      ...current,
-      "",
-    ]);
+    setFeatures(
+      (current) => [
+        ...current,
+        "",
+      ]
+    );
   }
 
   function removeFeature(
     index: number
   ) {
     if (
-      features.length === 1
+      features.length <= 1
     ) {
       return;
     }
 
-    setFeatures((current) =>
-      current.filter(
-        (_, featureIndex) =>
-          featureIndex !== index
-      )
+    setFeatures(
+      (current) =>
+        current.filter(
+          (
+            _,
+            featureIndex
+          ) =>
+            featureIndex !==
+            index
+        )
     );
   }
 
@@ -756,260 +1152,20 @@ export default function AdminProductPage() {
     );
   }
 
-  const variantsCode =
-    variants
-      .map(
-        (
-          variant,
-          variantIndex
-        ) => {
-          const finalName =
-            escapeText(
-              variant.name
-            ) ||
-            `Colour ${
-              variantIndex + 1
-            }`;
-
-          const variantSlug =
-            createSlug(
-              finalName
-            ) ||
-            `colour-${
-              variantIndex + 1
-            }`;
-
-          const finalHex =
-            variant.hex.trim() ||
-            "#000000";
-
-          const preparedImages =
-            variant.images
-              .map(
-                createImagePath
-              )
-              .filter(Boolean);
-
-          const finalImages =
-            preparedImages.length >
-            0
-              ? preparedImages
-              : [
-                  "/images/product-image.jpg",
-                ];
-
-          const imagesCode =
-            finalImages
-              .map(
-                (image) =>
-                  `        "${image}",`
-              )
-              .join("\n");
-
-          return `    {
-      name: "${finalName}",
-      slug: "${variantSlug}",
-      hex: "${finalHex}",
-
-      images: [
-${imagesCode}
-      ],
-
-      stock: {
-        XS: ${variant.stock.XS},
-        S: ${variant.stock.S},
-        M: ${variant.stock.M},
-        L: ${variant.stock.L},
-        XL: ${variant.stock.XL},
-        XXL: ${variant.stock.XXL},
-      },
-    }`;
-        }
-      )
-      .join(",\n\n");
-
-  const firstImagesCode =
-    (
-      firstVariantImages.length >
-      0
-        ? firstVariantImages
-        : [
-            "/images/product-image.jpg",
-          ]
-    )
-      .map(
-        (image) =>
-          `    "${image}",`
-      )
-      .join("\n");
-
-  const featureCode =
-    features
-      .filter(
-        (feature) =>
-          feature.trim() !== ""
-      )
-      .map(
-        (feature) =>
-          `    "${escapeText(
-            feature
-          )}",`
-      )
-      .join("\n");
-
-  const tshirtSizeGuideCode = `sizeGuide: {
-    XS: {
-      chest: ${tshirtSizeGuide.XS.chest},
-      length: ${tshirtSizeGuide.XS.length},
-      sleeve: ${tshirtSizeGuide.XS.sleeve},
-    },
-    S: {
-      chest: ${tshirtSizeGuide.S.chest},
-      length: ${tshirtSizeGuide.S.length},
-      sleeve: ${tshirtSizeGuide.S.sleeve},
-    },
-    M: {
-      chest: ${tshirtSizeGuide.M.chest},
-      length: ${tshirtSizeGuide.M.length},
-      sleeve: ${tshirtSizeGuide.M.sleeve},
-    },
-    L: {
-      chest: ${tshirtSizeGuide.L.chest},
-      length: ${tshirtSizeGuide.L.length},
-      sleeve: ${tshirtSizeGuide.L.sleeve},
-    },
-    XL: {
-      chest: ${tshirtSizeGuide.XL.chest},
-      length: ${tshirtSizeGuide.XL.length},
-      sleeve: ${tshirtSizeGuide.XL.sleeve},
-    },
-    XXL: {
-      chest: ${tshirtSizeGuide.XXL.chest},
-      length: ${tshirtSizeGuide.XXL.length},
-      sleeve: ${tshirtSizeGuide.XXL.sleeve},
-    },
-  },`;
-
-  const pantsSizeGuideCode = `sizeGuide: {
-    XS: {
-      waist: ${pantsSizeGuide.XS.waist},
-      hip: ${pantsSizeGuide.XS.hip},
-      length: ${pantsSizeGuide.XS.length},
-      thigh: ${pantsSizeGuide.XS.thigh},
-    },
-    S: {
-      waist: ${pantsSizeGuide.S.waist},
-      hip: ${pantsSizeGuide.S.hip},
-      length: ${pantsSizeGuide.S.length},
-      thigh: ${pantsSizeGuide.S.thigh},
-    },
-    M: {
-      waist: ${pantsSizeGuide.M.waist},
-      hip: ${pantsSizeGuide.M.hip},
-      length: ${pantsSizeGuide.M.length},
-      thigh: ${pantsSizeGuide.M.thigh},
-    },
-    L: {
-      waist: ${pantsSizeGuide.L.waist},
-      hip: ${pantsSizeGuide.L.hip},
-      length: ${pantsSizeGuide.L.length},
-      thigh: ${pantsSizeGuide.L.thigh},
-    },
-    XL: {
-      waist: ${pantsSizeGuide.XL.waist},
-      hip: ${pantsSizeGuide.XL.hip},
-      length: ${pantsSizeGuide.XL.length},
-      thigh: ${pantsSizeGuide.XL.thigh},
-    },
-    XXL: {
-      waist: ${pantsSizeGuide.XXL.waist},
-      hip: ${pantsSizeGuide.XXL.hip},
-      length: ${pantsSizeGuide.XXL.length},
-      thigh: ${pantsSizeGuide.XXL.thigh},
-    },
-  },`;
-
-  const generatedCode = `{
-  id: "${slug || "product-id"}",
-  slug: "${slug || "product-slug"}",
-
-  name: "${
-    escapeText(name) ||
-    "Product Name"
-  }",
-
-  shortName: "${
-    escapeText(shortName) ||
-    escapeText(name) ||
-    "Short Name"
-  }",
-
-  productType: "${productType}",
-
-  price: ${
-    Number(price) || 0
-  },
-
-  image: "${mainImage}",
-
-  images: [
-${firstImagesCode}
-  ],
-
-  stock: {
-    XS: ${firstVariant.stock.XS},
-    S: ${firstVariant.stock.S},
-    M: ${firstVariant.stock.M},
-    L: ${firstVariant.stock.L},
-    XL: ${firstVariant.stock.XL},
-    XXL: ${firstVariant.stock.XXL},
-  },
-
-  description:
-    "${escapeText(
-      description
-    )}",
-
-  features: [
-${featureCode}
-  ],
-
-  variants: [
-${variantsCode}
-  ],
-
-  ${
-    productType === "tshirt"
-      ? tshirtSizeGuideCode
-      : pantsSizeGuideCode
-  }
-},`;
-
-  const deleteCode =
-    originalProductSlug
-      ? `// app/data/products.ts file එකේ products array එකෙන්
-// slug "${originalProductSlug}" තියෙන සම්පූර්ණ product object එක delete කරන්න.
-
-// JavaScript filter example:
-const updatedProducts = products.filter(
-  (product) =>
-    product.slug !== "${originalProductSlug}"
-);`
-      : `// මුලින් EXISTING PRODUCT එකක් select කරන්න.
-// ඊට පස්සේ delete instructions මෙතන පේනවා.`;
-
   function validateProduct() {
     if (!name.trim()) {
-      setMessage(
-        "Product name එක ඇතුළත් කරන්න."
+      showMessage(
+        "Product name එක ඇතුළත් කරන්න.",
+        "error"
       );
 
       return false;
     }
 
     if (!slug) {
-      setMessage(
-        "Product name එකෙන් valid slug එකක් හදන්න බැහැ."
+      showMessage(
+        "Valid product slug එකක් හදන්න බැහැ.",
+        "error"
       );
 
       return false;
@@ -1018,8 +1174,9 @@ const updatedProducts = products.filter(
     if (
       Number(price) <= 0
     ) {
-      setMessage(
-        "හරි price එකක් ඇතුළත් කරන්න."
+      showMessage(
+        "හරි price එකක් ඇතුළත් කරන්න.",
+        "error"
       );
 
       return false;
@@ -1028,8 +1185,9 @@ const updatedProducts = products.filter(
     if (
       variants.length === 0
     ) {
-      setMessage(
-        "අවම වශයෙන් colour එකක් add කරන්න."
+      showMessage(
+        "අවම වශයෙන් colour එකක් add කරන්න.",
+        "error"
       );
 
       return false;
@@ -1045,108 +1203,362 @@ const updatedProducts = products.filter(
           index
         ].name.trim()
       ) {
-        setMessage(
+        showMessage(
           `Colour ${
             index + 1
-          } name එක ඇතුළත් කරන්න.`
+          } name එක ඇතුළත් කරන්න.`,
+          "error"
         );
 
         return false;
       }
     }
 
-    setMessage("");
-
     return true;
   }
 
-  async function copyGeneratedCode() {
+  function buildProductPayload() {
+    const preparedVariants =
+      variants.map(
+        (
+          variant,
+          index
+        ) => {
+          const preparedImages =
+            variant.images
+              .map(
+                createImagePath
+              )
+              .filter(Boolean);
+
+          return {
+            name:
+              variant.name.trim(),
+
+            slug:
+              createSlug(
+                variant.name
+              ) ||
+              `colour-${
+                index + 1
+              }`,
+
+            hex:
+              variant.hex.trim() ||
+              "#000000",
+
+            images:
+              preparedImages.length >
+              0
+                ? preparedImages
+                : [
+                    "/images/product-image.jpg",
+                  ],
+
+            stock:
+              variant.stock,
+          };
+        }
+      );
+
+    const firstImages =
+      preparedVariants[0]
+        ?.images || [
+        "/images/product-image.jpg",
+      ];
+
+    return {
+      originalSlug:
+        originalProductSlug ||
+        undefined,
+
+      slug,
+
+      name:
+        name.trim(),
+
+      shortName:
+        shortName.trim() ||
+        name.trim(),
+
+      productType,
+
+      price:
+        Number(price),
+
+      image:
+        firstImages[0],
+
+      images:
+        firstImages,
+
+      description:
+        description.trim(),
+
+      features:
+        features
+          .map(
+            (feature) =>
+              feature.trim()
+          )
+          .filter(Boolean),
+
+      sizeGuide:
+        productType ===
+        "tshirt"
+          ? tshirtSizeGuide
+          : pantsSizeGuide,
+
+      variants:
+        preparedVariants,
+    };
+  }
+
+  async function saveProduct() {
     if (!validateProduct()) {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(
-        generatedCode
-      );
-
-      setCopied(true);
-
-      setMessage(
-        adminMode === "edit"
-          ? "Updated product code copy කළා."
-          : "New product code copy කළා."
-      );
-
-      window.setTimeout(() => {
-        setCopied(false);
-      }, 2500);
-    } catch {
-      setMessage(
-        "Code එක copy කරන්න බැරි වුණා."
-      );
-    }
-  }
-
-  async function copyDeleteCode() {
     if (
+      adminMode === "edit" &&
       !originalProductSlug
     ) {
-      setMessage(
-        "මුලින් existing product එකක් select කරන්න."
+      showMessage(
+        "මුලින් existing product එකක් select කරන්න.",
+        "error"
       );
 
       return;
     }
 
+    setSaving(true);
+
     try {
-      await navigator.clipboard.writeText(
-        deleteCode
-      );
+      const response =
+        await fetch(
+          "/api/admin/products",
+          {
+            method:
+              adminMode ===
+              "edit"
+                ? "PUT"
+                : "POST",
 
-      setDeleteCodeCopied(
-        true
-      );
+            headers: {
+              "Content-Type":
+                "application/json",
 
-      setMessage(
-        "Delete instructions copy කළා."
-      );
+              "x-darky-admin-password":
+                adminPassword,
+            },
 
-      window.setTimeout(() => {
-        setDeleteCodeCopied(
-          false
+            body:
+              JSON.stringify({
+                product:
+                  buildProductPayload(),
+              }),
+          }
         );
-      }, 2500);
-    } catch {
-      setMessage(
-        "Delete code එක copy කරන්න බැරි වුණා."
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "Product save කරන්න බැරි වුණා."
+        );
+      }
+
+      showMessage(
+        result.message ||
+          "Product save කළා."
       );
+
+      await loadProducts();
+
+      resetForm();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Product save කරන්න බැරි වුණා.";
+
+      showMessage(
+        errorMessage,
+        "error"
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
-  const totalStock =
-    variants.reduce(
-      (
-        productTotal,
-        variant
-      ) =>
-        productTotal +
-        productSizes.reduce(
-          (
-            variantTotal,
-            size
-          ) =>
-            variantTotal +
-            variant.stock[size],
-          0
-        ),
-      0
+  async function deleteProduct() {
+    if (
+      !originalProductSlug
+    ) {
+      showMessage(
+        "Delete කරන්න product එකක් select කරන්න.",
+        "error"
+      );
+
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `${name} product එක සම්පූර්ණයෙන් delete කරන්නද?`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      const response =
+        await fetch(
+          "/api/admin/products",
+          {
+            method:
+              "DELETE",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              "x-darky-admin-password":
+                adminPassword,
+            },
+
+            body:
+              JSON.stringify({
+                slug:
+                  originalProductSlug,
+              }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "Product delete කරන්න බැරි වුණා."
+        );
+      }
+
+      showMessage(
+        result.message ||
+          "Product delete කළා."
+      );
+
+      await loadProducts();
+
+      resetForm();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Product delete කරන්න බැරි වුණා.";
+
+      showMessage(
+        errorMessage,
+        "error"
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-black px-5 text-white">
+        <div className="w-full max-w-md border border-white/20 bg-white p-7 text-black shadow-2xl sm:p-10">
+          <p className="text-sm font-bold tracking-[0.3em] text-gray-500">
+            DARKY T
+          </p>
+
+          <h1 className="mt-3 text-4xl font-black">
+            ADMIN LOGIN
+          </h1>
+
+          <p className="mt-4 leading-7 text-gray-600">
+            Product manager එක open කරන්න admin password එක ඇතුළත් කරන්න.
+          </p>
+
+          {message && (
+            <div
+              className={`mt-5 border px-4 py-3 text-sm font-bold ${
+                messageType ===
+                "error"
+                  ? "border-red-300 bg-red-50 text-red-700"
+                  : "border-green-300 bg-green-50 text-green-700"
+              }`}
+            >
+              {message}
+            </div>
+          )}
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              loginAdmin();
+            }}
+            className="mt-7"
+          >
+            <label className="mb-2 block text-sm font-black">
+              ADMIN PASSWORD
+            </label>
+
+            <input
+              type="password"
+              value={
+                adminPassword
+              }
+              onChange={(event) =>
+                setAdminPassword(
+                  event.target.value
+                )
+              }
+              autoComplete="current-password"
+              placeholder="Enter admin password"
+              className="w-full border border-gray-300 px-4 py-4 outline-none focus:border-black"
+            />
+
+            <button
+              type="submit"
+              disabled={
+                loginLoading
+              }
+              className={`mt-5 w-full px-6 py-4 font-black text-white ${
+                loginLoading
+                  ? "cursor-not-allowed bg-gray-500"
+                  : "bg-black hover:bg-gray-800"
+              }`}
+            >
+              {loginLoading
+                ? "CHECKING..."
+                : "LOGIN"}
+            </button>
+          </form>
+
+          <a
+            href="/"
+            className="mt-6 block text-center text-sm font-bold underline underline-offset-4"
+          >
+            BACK TO HOME
+          </a>
+        </div>
+      </main>
     );
+  }
 
   return (
     <main className="min-h-screen bg-gray-100 text-black">
-      {/* Navbar */}
-      <nav className="flex items-center justify-between bg-black px-5 py-5 text-white md:px-12">
+      <nav className="flex flex-wrap items-center justify-between gap-4 bg-black px-5 py-5 text-white md:px-12">
         <a
           href="/"
           className="text-xl font-black tracking-[0.25em] sm:text-2xl"
@@ -1154,12 +1566,24 @@ const updatedProducts = products.filter(
           DARKY T
         </a>
 
-        <a
-          href="/"
-          className="text-sm font-bold hover:text-gray-300"
-        >
-          BACK TO HOME
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href="/"
+            className="text-sm font-bold hover:text-gray-300"
+          >
+            HOME
+          </a>
+
+          <button
+            type="button"
+            onClick={
+              logoutAdmin
+            }
+            className="border border-white px-4 py-2 text-sm font-black hover:bg-white hover:text-black"
+          >
+            LOGOUT
+          </button>
+        </div>
       </nav>
 
       <section className="mx-auto max-w-7xl px-5 py-10 md:px-12 md:py-14">
@@ -1167,19 +1591,46 @@ const updatedProducts = products.filter(
           DARKY T ADMIN
         </p>
 
-        <h1 className="mt-3 text-4xl font-black md:text-5xl">
-          PRODUCT MANAGER
-        </h1>
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <h1 className="text-4xl font-black md:text-5xl">
+              PRODUCT MANAGER
+            </h1>
 
-        <p className="mt-4 max-w-3xl leading-7 text-gray-600">
-          New product එකක් create කරන්න හෝ existing
-          product එකක් load කරලා edit කරන්න.
-          Generated code එක තවමත්
-          `app/data/products.ts` file එකට manually paste
-          කරන්න ඕනේ.
-        </p>
+            <p className="mt-4 max-w-3xl leading-7 text-gray-600">
+              Products Supabase database එකට automatically add, update සහ delete කරන්න.
+            </p>
+          </div>
 
-        {/* Admin Mode */}
+          <button
+            type="button"
+            onClick={() =>
+              loadProducts()
+            }
+            disabled={
+              productsLoading
+            }
+            className="bg-black px-6 py-4 font-black text-white hover:bg-gray-800 disabled:bg-gray-400"
+          >
+            {productsLoading
+              ? "LOADING..."
+              : "REFRESH PRODUCTS"}
+          </button>
+        </div>
+
+        {message && (
+          <div
+            className={`mt-6 border px-5 py-4 text-sm font-bold ${
+              messageType ===
+              "error"
+                ? "border-red-300 bg-red-50 text-red-700"
+                : "border-green-300 bg-green-50 text-green-700"
+            }`}
+          >
+            {message}
+          </div>
+        )}
+
         <div className="mt-8 grid gap-5 bg-white p-6 shadow-sm md:grid-cols-2 md:p-8">
           <div>
             <label className="mb-2 block text-sm font-black">
@@ -1194,10 +1645,12 @@ const updatedProducts = products.filter(
                     .value as AdminMode;
 
                 if (
-                  mode === "create"
+                  mode ===
+                  "create"
                 ) {
                   resetForm();
                 } else {
+                  resetForm();
                   setAdminMode(
                     "edit"
                   );
@@ -1232,7 +1685,7 @@ const updatedProducts = products.filter(
                   event.target.value
                 )
               }
-              className="w-full border border-gray-300 bg-white px-4 py-3 outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+              className="w-full border border-gray-300 bg-white px-4 py-3 outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
             >
               <option value="">
                 SELECT PRODUCT
@@ -1242,14 +1695,16 @@ const updatedProducts = products.filter(
                 (product) => (
                   <option
                     key={
-                      product.slug
+                      product.id
                     }
                     value={
                       product.slug
                     }
                   >
                     {product.name} — Rs.{" "}
-                    {product.price.toLocaleString()}
+                    {Number(
+                      product.price
+                    ).toLocaleString()}
                   </option>
                 )
               )}
@@ -1257,42 +1712,12 @@ const updatedProducts = products.filter(
           </div>
         </div>
 
-        {message && (
-          <div className="mt-5 border border-black bg-white px-5 py-4 text-sm font-bold">
-            {message}
-          </div>
-        )}
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-          {/* Form */}
+        <div className="mt-8 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-8">
-            {/* Product Details */}
             <div className="bg-white p-6 shadow-sm md:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-black">
-                    PRODUCT DETAILS
-                  </h2>
-
-                  <p className="mt-2 text-sm text-gray-500">
-                    Mode:{" "}
-                    <span className="font-black uppercase text-black">
-                      {adminMode}
-                    </span>
-                  </p>
-                </div>
-
-                {originalProductSlug && (
-                  <div className="bg-gray-100 px-4 py-3 text-sm">
-                    Original slug:{" "}
-                    <span className="font-black">
-                      {
-                        originalProductSlug
-                      }
-                    </span>
-                  </div>
-                )}
-              </div>
+              <h2 className="text-2xl font-black">
+                PRODUCT DETAILS
+              </h2>
 
               <div className="mt-7 space-y-5">
                 <div>
@@ -1317,7 +1742,7 @@ const updatedProducts = products.filter(
                     </option>
 
                     <option value="pants">
-                      PANTS / TROUSERS
+                      PANTS
                     </option>
                   </select>
                 </div>
@@ -1331,19 +1756,21 @@ const updatedProducts = products.filter(
                     value={name}
                     onChange={(event) =>
                       setName(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
-                    placeholder="Example: Darky Essential Tee"
+                    placeholder="Example: Monster"
                     className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                   />
 
                   <p className="mt-2 text-xs text-gray-500">
-                    Generated slug:{" "}
-                    <span className="font-bold text-black">
+                    Product URL:{" "}
+                    <strong>
+                      /product/
                       {slug ||
                         "product-slug"}
-                    </span>
+                    </strong>
                   </p>
                 </div>
 
@@ -1353,13 +1780,16 @@ const updatedProducts = products.filter(
                   </label>
 
                   <input
-                    value={shortName}
+                    value={
+                      shortName
+                    }
                     onChange={(event) =>
                       setShortName(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
-                    placeholder="Example: Essential Tee"
+                    placeholder="Example: Monster"
                     className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                   />
                 </div>
@@ -1371,11 +1801,12 @@ const updatedProducts = products.filter(
 
                   <input
                     type="number"
-                    min="0"
+                    min="1"
                     value={price}
                     onChange={(event) =>
                       setPrice(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
@@ -1388,21 +1819,22 @@ const updatedProducts = products.filter(
                   </label>
 
                   <textarea
-                    value={description}
+                    value={
+                      description
+                    }
                     onChange={(event) =>
                       setDescription(
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     rows={5}
-                    placeholder="Product description එක ලියන්න"
                     className="w-full resize-none border border-gray-300 px-4 py-3 outline-none focus:border-black"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Features */}
             <div className="bg-white p-6 shadow-sm md:p-8">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <h2 className="text-2xl font-black">
@@ -1432,18 +1864,13 @@ const updatedProducts = products.filter(
                         value={
                           feature
                         }
-                        onChange={(
-                          event
-                        ) =>
+                        onChange={(event) =>
                           updateFeature(
                             index,
                             event.target
                               .value
                           )
                         }
-                        placeholder={`Feature ${
-                          index + 1
-                        }`}
                         className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                       />
 
@@ -1454,7 +1881,7 @@ const updatedProducts = products.filter(
                             index
                           )
                         }
-                        className="border border-red-600 px-4 font-black text-red-600 hover:bg-red-600 hover:text-white"
+                        className="border border-red-600 px-4 font-black text-red-600"
                       >
                         ×
                       </button>
@@ -1464,7 +1891,6 @@ const updatedProducts = products.filter(
               </div>
             </div>
 
-            {/* Colour Variants */}
             <div className="bg-white p-6 shadow-sm md:p-8">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -1473,7 +1899,7 @@ const updatedProducts = products.filter(
                   </h2>
 
                   <p className="mt-2 text-sm text-gray-500">
-                    Colours, photos සහ size stock manage කරන්න.
+                    Colours, images සහ stock manage කරන්න.
                   </p>
                 </div>
 
@@ -1503,67 +1929,31 @@ const updatedProducts = products.filter(
                       <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                           <span
-                            className="h-10 w-10 rounded-full border border-gray-300"
+                            className="h-10 w-10 rounded-full border"
                             style={{
                               backgroundColor:
                                 variant.hex,
                             }}
                           />
 
-                          <div>
-                            <h3 className="text-xl font-black">
-                              COLOUR{" "}
-                              {variantIndex +
-                                1}
-                            </h3>
-
-                            <p className="text-sm text-gray-500">
-                              Stock:{" "}
-                              {productSizes.reduce(
-                                (
-                                  total,
-                                  size
-                                ) =>
-                                  total +
-                                  variant
-                                    .stock[
-                                    size
-                                  ],
-                                0
-                              )}
-                            </p>
-                          </div>
+                          <h3 className="text-xl font-black">
+                            COLOUR{" "}
+                            {variantIndex +
+                              1}
+                          </h3>
                         </div>
 
-                        <div className="flex gap-3">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedPreviewVariant(
-                                variantIndex
-                              );
-
-                              setSelectedPreviewImage(
-                                0
-                              );
-                            }}
-                            className="border border-black px-4 py-2 text-sm font-bold hover:bg-black hover:text-white"
-                          >
-                            PREVIEW
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              removeColour(
-                                variantIndex
-                              )
-                            }
-                            className="border border-red-600 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-600 hover:text-white"
-                          >
-                            REMOVE
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeColour(
+                              variantIndex
+                            )
+                          }
+                          className="border border-red-600 px-4 py-2 text-sm font-bold text-red-600"
+                        >
+                          REMOVE
+                        </button>
                       </div>
 
                       <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -1576,9 +1966,7 @@ const updatedProducts = products.filter(
                             value={
                               variant.name
                             }
-                            onChange={(
-                              event
-                            ) =>
+                            onChange={(event) =>
                               updateVariantName(
                                 variantIndex,
                                 event.target
@@ -1600,38 +1988,34 @@ const updatedProducts = products.filter(
                               value={
                                 variant.hex
                               }
-                              onChange={(
-                                event
-                              ) =>
+                              onChange={(event) =>
                                 updateVariantHex(
                                   variantIndex,
                                   event.target
                                     .value
                                 )
                               }
-                              className="h-12 w-16 border border-gray-300"
+                              className="h-12 w-16 border"
                             />
 
                             <input
                               value={
                                 variant.hex
                               }
-                              onChange={(
-                                event
-                              ) =>
+                              onChange={(event) =>
                                 updateVariantHex(
                                   variantIndex,
                                   event.target
                                     .value
                                 )
                               }
-                              className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                              className="w-full border border-gray-300 px-4 py-3"
                             />
                           </div>
                         </div>
                       </div>
 
-                      <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
+                      <div className="mt-7 flex items-center justify-between gap-4">
                         <h4 className="font-black">
                           PHOTOS
                         </h4>
@@ -1671,9 +2055,7 @@ const updatedProducts = products.filter(
                                   value={
                                     image
                                   }
-                                  onChange={(
-                                    event
-                                  ) =>
+                                  onChange={(event) =>
                                     updateVariantImage(
                                       variantIndex,
                                       imageIndex,
@@ -1682,8 +2064,8 @@ const updatedProducts = products.filter(
                                         .value
                                     )
                                   }
-                                  placeholder="image-name.jpg"
-                                  className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                                  placeholder="tshirt-white-1.jpg"
+                                  className="w-full border border-gray-300 px-4 py-3"
                                 />
 
                                 <button
@@ -1727,9 +2109,7 @@ const updatedProducts = products.filter(
                                     size
                                   ]
                                 }
-                                onChange={(
-                                  event
-                                ) =>
+                                onChange={(event) =>
                                   updateVariantStock(
                                     variantIndex,
                                     size,
@@ -1738,7 +2118,7 @@ const updatedProducts = products.filter(
                                       .value
                                   )
                                 }
-                                className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                                className="w-full border border-gray-300 px-4 py-3"
                               />
                             </div>
                           )
@@ -1750,7 +2130,6 @@ const updatedProducts = products.filter(
               </div>
             </div>
 
-            {/* Size Guide */}
             <div className="bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-black">
                 {productType ===
@@ -1759,10 +2138,6 @@ const updatedProducts = products.filter(
                   : "PANTS SIZE GUIDE"}
               </h2>
 
-              <p className="mt-3 text-sm text-gray-500">
-                Measurements inches වලින් දාන්න.
-              </p>
-
               <div className="mt-6 space-y-5">
                 {productSizes.map(
                   (size) => (
@@ -1770,7 +2145,7 @@ const updatedProducts = products.filter(
                       key={size}
                       className="border border-gray-200 p-5"
                     >
-                      <h3 className="text-lg font-black">
+                      <h3 className="font-black">
                         SIZE {size}
                       </h3>
 
@@ -1791,9 +2166,7 @@ const updatedProducts = products.filter(
                                 }
                               >
                                 <label className="mb-2 block text-sm font-bold uppercase">
-                                  {
-                                    field
-                                  }
+                                  {field}
                                 </label>
 
                                 <input
@@ -1807,9 +2180,7 @@ const updatedProducts = products.filter(
                                       field
                                     ]
                                   }
-                                  onChange={(
-                                    event
-                                  ) =>
+                                  onChange={(event) =>
                                     updateTshirtMeasurement(
                                       size,
                                       field,
@@ -1818,7 +2189,7 @@ const updatedProducts = products.filter(
                                         .value
                                     )
                                   }
-                                  className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                                  className="w-full border border-gray-300 px-4 py-3"
                                 />
                               </div>
                             )
@@ -1841,9 +2212,7 @@ const updatedProducts = products.filter(
                                 }
                               >
                                 <label className="mb-2 block text-sm font-bold uppercase">
-                                  {
-                                    field
-                                  }
+                                  {field}
                                 </label>
 
                                 <input
@@ -1857,9 +2226,7 @@ const updatedProducts = products.filter(
                                       field
                                     ]
                                   }
-                                  onChange={(
-                                    event
-                                  ) =>
+                                  onChange={(event) =>
                                     updatePantsMeasurement(
                                       size,
                                       field,
@@ -1868,7 +2235,7 @@ const updatedProducts = products.filter(
                                         .value
                                     )
                                   }
-                                  className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                                  className="w-full border border-gray-300 px-4 py-3"
                                 />
                               </div>
                             )
@@ -1890,7 +2257,6 @@ const updatedProducts = products.filter(
             </button>
           </div>
 
-          {/* Preview and Code */}
           <div className="space-y-8 lg:sticky lg:top-6 lg:h-fit">
             <div className="bg-white p-6 shadow-sm md:p-8">
               <div className="flex items-center justify-between gap-4">
@@ -1923,7 +2289,8 @@ const updatedProducts = products.filter(
                   className="aspect-square w-full object-cover"
                 />
 
-                {totalStock === 0 && (
+                {totalStock ===
+                  0 && (
                   <span className="absolute left-3 top-3 bg-red-600 px-3 py-2 text-xs font-black text-white">
                     SOLD OUT
                   </span>
@@ -1955,10 +2322,7 @@ const updatedProducts = products.filter(
                       >
                         <img
                           src={image}
-                          alt={`Preview ${
-                            imageIndex +
-                            1
-                          }`}
+                          alt="Preview"
                           className="aspect-square w-full object-cover"
                         />
                       </button>
@@ -1975,7 +2339,8 @@ const updatedProducts = products.filter(
               <p className="mt-2 text-xl font-black">
                 Rs.{" "}
                 {(
-                  Number(price) || 0
+                  Number(price) ||
+                  0
                 ).toLocaleString()}
               </p>
 
@@ -2029,102 +2394,80 @@ const updatedProducts = products.filter(
                       feature,
                       index
                     ) => (
-                      <p
-                        key={index}
-                      >
-                        ✓{" "}
-                        {
-                          feature
-                        }
+                      <p key={index}>
+                        ✓ {feature}
                       </p>
                     )
                   )}
               </div>
-
-              <p className="mt-6 break-all text-sm font-bold">
-                /product/
-                {slug ||
-                  "product-slug"}
-              </p>
             </div>
 
-            {/* Generated Code */}
             <div className="bg-black p-6 text-white shadow-sm md:p-8">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-black">
-                    {adminMode ===
-                    "edit"
-                      ? "UPDATED PRODUCT CODE"
-                      : "NEW PRODUCT CODE"}
-                  </h2>
+              <h2 className="text-2xl font-black">
+                {adminMode ===
+                "edit"
+                  ? "UPDATE PRODUCT"
+                  : "SAVE NEW PRODUCT"}
+              </h2>
 
-                  {adminMode ===
-                    "edit" && (
-                    <p className="mt-2 text-sm text-gray-400">
-                      products.ts එකේ old object එක replace කරන්න.
-                    </p>
-                  )}
-                </div>
+              <p className="mt-3 text-sm leading-6 text-gray-400">
+                Button එක click කළාම product data Supabase database එකට automatically save වෙනවා.
+              </p>
+
+              <button
+                type="button"
+                onClick={
+                  saveProduct
+                }
+                disabled={saving}
+                className={`mt-6 w-full px-6 py-4 font-black ${
+                  saving
+                    ? "cursor-not-allowed bg-gray-500"
+                    : "bg-white text-black hover:bg-gray-200"
+                }`}
+              >
+                {saving
+                  ? "SAVING..."
+                  : adminMode ===
+                      "edit"
+                    ? "UPDATE PRODUCT"
+                    : "SAVE PRODUCT"}
+              </button>
+            </div>
+
+            {adminMode ===
+              "edit" && (
+              <div className="border border-red-200 bg-white p-6 shadow-sm md:p-8">
+                <h2 className="text-2xl font-black text-red-600">
+                  DELETE PRODUCT
+                </h2>
+
+                <p className="mt-3 text-sm leading-6 text-gray-600">
+                  මේකෙන් product එක, colours සහ stock data සියල්ල database එකෙන් delete වෙනවා.
+                </p>
 
                 <button
                   type="button"
                   onClick={
-                    copyGeneratedCode
+                    deleteProduct
                   }
-                  className="bg-white px-5 py-3 font-black text-black hover:bg-gray-200"
+                  disabled={
+                    deleting ||
+                    !originalProductSlug
+                  }
+                  className={`mt-6 w-full px-6 py-4 font-black ${
+                    deleting ||
+                    !originalProductSlug
+                      ? "cursor-not-allowed bg-gray-300 text-gray-500"
+                      : "bg-red-600 text-white hover:bg-red-700"
+                  }`}
                 >
-                  {copied
-                    ? "COPIED ✓"
-                    : "COPY CODE"}
+                  {deleting
+                    ? "DELETING..."
+                    : "DELETE PRODUCT"}
                 </button>
               </div>
-
-              <pre className="mt-6 max-h-[900px] overflow-auto whitespace-pre-wrap border border-white/20 bg-gray-950 p-5 text-sm leading-7 text-gray-200">
-                <code>
-                  {generatedCode}
-                </code>
-              </pre>
-            </div>
-
-            {/* Delete Product */}
-            <div className="border border-red-200 bg-white p-6 shadow-sm md:p-8">
-              <h2 className="text-2xl font-black text-red-600">
-                DELETE PRODUCT
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-gray-600">
-                මේ Admin page එක database එකකට connect වෙලා නැති නිසා
-                delete button එකෙන් products.ts file එක automatically
-                වෙනස් කරන්න බැහැ. Existing product object එක
-                `products` array එකෙන් manually remove කරන්න.
-              </p>
-
-              <pre className="mt-5 overflow-auto whitespace-pre-wrap border border-red-200 bg-red-50 p-4 text-sm leading-7 text-red-700">
-                <code>
-                  {deleteCode}
-                </code>
-              </pre>
-
-              <button
-                type="button"
-                disabled={
-                  !originalProductSlug
-                }
-                onClick={
-                  copyDeleteCode
-                }
-                className={`mt-5 w-full px-5 py-4 font-black ${
-                  originalProductSlug
-                    ? "bg-red-600 text-white hover:bg-red-700"
-                    : "cursor-not-allowed bg-gray-300 text-gray-500"
-                }`}
-              >
-                {deleteCodeCopied
-                  ? "DELETE INSTRUCTIONS COPIED ✓"
-                  : "COPY DELETE INSTRUCTIONS"}
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </section>
