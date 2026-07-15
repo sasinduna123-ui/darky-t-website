@@ -11,11 +11,15 @@ type DirectOrderItem = {
   id: string;
   name: string;
   image: string;
+
   color?: string;
   colorSlug?: string;
+
   size: string;
   price: number;
   quantity: number;
+
+  maxStock?: number;
 };
 
 const districts = [
@@ -53,14 +57,19 @@ export default function DirectOrderPage() {
   const [isLoading, setIsLoading] =
     useState(true);
 
+  const [orderId, setOrderId] =
+    useState("");
+
   const [customerName, setCustomerName] =
     useState("");
 
   const [primaryPhone, setPrimaryPhone] =
     useState("");
 
-  const [alternativePhone, setAlternativePhone] =
-    useState("");
+  const [
+    alternativePhone,
+    setAlternativePhone,
+  ] = useState("");
 
   const [district, setDistrict] =
     useState("");
@@ -73,6 +82,26 @@ export default function DirectOrderPage() {
 
   const [errorMessage, setErrorMessage] =
     useState("");
+
+  function generateOrderId(): string {
+    const now = new Date();
+
+    const year = now.getFullYear();
+
+    const month = String(
+      now.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+      now.getDate()
+    ).padStart(2, "0");
+
+    const randomNumber = Math.floor(
+      1000 + Math.random() * 9000
+    );
+
+    return `DT-${year}${month}${day}-${randomNumber}`;
+  }
 
   useEffect(() => {
     try {
@@ -90,65 +119,31 @@ export default function DirectOrderPage() {
         JSON.parse(savedOrder);
 
       setOrderItem(parsedOrder);
+
+      const savedOrderId =
+        localStorage.getItem(
+          "darky-direct-order-id"
+        );
+
+      if (savedOrderId) {
+        setOrderId(savedOrderId);
+      } else {
+        const newOrderId =
+          generateOrderId();
+
+        localStorage.setItem(
+          "darky-direct-order-id",
+          newOrderId
+        );
+
+        setOrderId(newOrderId);
+      }
     } catch {
       setOrderItem(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
-
-  if (isLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-white px-6 text-black">
-        <p className="font-bold">
-          Loading order...
-        </p>
-      </main>
-    );
-  }
-
-  if (!orderItem) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-black">
-        <div>
-          <h1 className="text-4xl font-black">
-            ORDER NOT FOUND
-          </h1>
-
-          <p className="mt-4 text-gray-600">
-            Order කරන්න product එකක් තෝරලා නැහැ.
-          </p>
-
-          <a
-            href="/#shop"
-            className="mt-8 inline-block bg-black px-8 py-4 font-bold text-white transition hover:bg-gray-800"
-          >
-            BACK TO SHOP
-          </a>
-        </div>
-      </main>
-    );
-  }
-
-  const currentOrderItem = orderItem;
-
-  const subtotal =
-    currentOrderItem.price *
-    currentOrderItem.quantity;
-
-  const hasFixedDeliveryFee =
-    currentOrderItem.quantity > 0 &&
-    currentOrderItem.quantity <= 5;
-
-  const deliveryFee =
-    hasFixedDeliveryFee ? 350 : 0;
-
-  const finalTotal =
-    subtotal + deliveryFee;
-
-  const selectedColour =
-    currentOrderItem.color?.trim() ||
-    "Not selected";
 
   function cleanPhoneNumber(
     value: string
@@ -162,11 +157,15 @@ export default function DirectOrderPage() {
     const cleanedNumber =
       cleanPhoneNumber(value);
 
-    if (cleanedNumber.startsWith("94")) {
+    if (
+      cleanedNumber.startsWith("94")
+    ) {
       return `+${cleanedNumber}`;
     }
 
-    if (cleanedNumber.startsWith("0")) {
+    if (
+      cleanedNumber.startsWith("0")
+    ) {
       return `+94${cleanedNumber.slice(1)}`;
     }
 
@@ -179,11 +178,15 @@ export default function DirectOrderPage() {
     const cleanedNumber =
       cleanPhoneNumber(value);
 
-    if (cleanedNumber.startsWith("94")) {
+    if (
+      cleanedNumber.startsWith("94")
+    ) {
       return cleanedNumber.length === 11;
     }
 
-    if (cleanedNumber.startsWith("0")) {
+    if (
+      cleanedNumber.startsWith("0")
+    ) {
       return cleanedNumber.length === 10;
     }
 
@@ -191,10 +194,47 @@ export default function DirectOrderPage() {
   }
 
   function validateForm(): boolean {
+    if (!orderItem) {
+      setErrorMessage(
+        "Order product එක හොයාගන්න බැහැ."
+      );
+
+      return false;
+    }
+
+    const maxStock =
+      Number(orderItem.maxStock);
+
+    if (
+      Number.isFinite(maxStock) &&
+      maxStock > 0 &&
+      orderItem.quantity > maxStock
+    ) {
+      setErrorMessage(
+        `${orderItem.name} stock limit එක ${maxStock}යි.`
+      );
+
+      return false;
+    }
+
+    if (
+      !Number.isFinite(
+        Number(orderItem.quantity)
+      ) ||
+      orderItem.quantity < 1
+    ) {
+      setErrorMessage(
+        "Order quantity එක invalid."
+      );
+
+      return false;
+    }
+
     if (!customerName.trim()) {
       setErrorMessage(
         "Customer name එක ඇතුළත් කරන්න."
       );
+
       return false;
     }
 
@@ -202,6 +242,7 @@ export default function DirectOrderPage() {
       setErrorMessage(
         "Primary phone number එක ඇතුළත් කරන්න."
       );
+
       return false;
     }
 
@@ -209,6 +250,7 @@ export default function DirectOrderPage() {
       setErrorMessage(
         "හරි primary phone number එකක් ඇතුළත් කරන්න."
       );
+
       return false;
     }
 
@@ -216,23 +258,32 @@ export default function DirectOrderPage() {
       setErrorMessage(
         "Alternative phone number එක ඇතුළත් කරන්න."
       );
+
       return false;
     }
 
-    if (!isValidPhone(alternativePhone)) {
+    if (
+      !isValidPhone(
+        alternativePhone
+      )
+    ) {
       setErrorMessage(
         "හරි alternative phone number එකක් ඇතුළත් කරන්න."
       );
+
       return false;
     }
 
     if (
       cleanPhoneNumber(primaryPhone) ===
-      cleanPhoneNumber(alternativePhone)
+      cleanPhoneNumber(
+        alternativePhone
+      )
     ) {
       setErrorMessage(
         "Phone numbers දෙකට වෙනස් numbers දෙකක් ඇතුළත් කරන්න."
       );
+
       return false;
     }
 
@@ -240,6 +291,7 @@ export default function DirectOrderPage() {
       setErrorMessage(
         "District එක තෝරන්න."
       );
+
       return false;
     }
 
@@ -247,10 +299,12 @@ export default function DirectOrderPage() {
       setErrorMessage(
         "Delivery address එක ඇතුළත් කරන්න."
       );
+
       return false;
     }
 
     setErrorMessage("");
+
     return true;
   }
 
@@ -263,8 +317,49 @@ export default function DirectOrderPage() {
       return;
     }
 
+    if (!orderItem) {
+      return;
+    }
+
+    const currentOrderItem =
+      orderItem;
+
+    const currentOrderId =
+      orderId || generateOrderId();
+
+    if (!orderId) {
+      localStorage.setItem(
+        "darky-direct-order-id",
+        currentOrderId
+      );
+
+      setOrderId(currentOrderId);
+    }
+
+    const subtotal =
+      currentOrderItem.price *
+      currentOrderItem.quantity;
+
+    const hasFixedDeliveryFee =
+      currentOrderItem.quantity > 0 &&
+      currentOrderItem.quantity <= 5;
+
+    const deliveryFee =
+      hasFixedDeliveryFee
+        ? 350
+        : 0;
+
+    const finalTotal =
+      subtotal + deliveryFee;
+
+    const selectedColour =
+      currentOrderItem.color?.trim() ||
+      "Not selected";
+
     const formattedPrimaryPhone =
-      formatSriLankanPhone(primaryPhone);
+      formatSriLankanPhone(
+        primaryPhone
+      );
 
     const formattedAlternativePhone =
       formatSriLankanPhone(
@@ -279,6 +374,8 @@ export default function DirectOrderPage() {
 • Final Total: _To be confirmed after calculating the delivery fee_`;
 
     const whatsappMessage = `*DARKY T - NEW ORDER*
+
+*Order ID: ${currentOrderId}*
 
 Hello DARKY T,
 
@@ -314,6 +411,62 @@ ${deliveryDetails}
 Thank you,
 *DARKY T*`;
 
+    const lastOrderData = {
+      orderId: currentOrderId,
+      orderType: "direct",
+
+      customerName:
+        customerName.trim(),
+
+      primaryPhone:
+        formattedPrimaryPhone,
+
+      alternativePhone:
+        formattedAlternativePhone,
+
+      district:
+        district.trim(),
+
+      address:
+        address.trim(),
+
+      note:
+        note.trim() ||
+        "No special note",
+
+      items: [
+        {
+          ...currentOrderItem,
+          color: selectedColour,
+        },
+      ],
+
+      totalQuantity:
+        currentOrderItem.quantity,
+
+      subtotal,
+
+      deliveryFee:
+        hasFixedDeliveryFee
+          ? deliveryFee
+          : null,
+
+      finalTotal:
+        hasFixedDeliveryFee
+          ? finalTotal
+          : null,
+
+      createdAt:
+        new Date().toISOString(),
+    };
+
+    localStorage.setItem(
+      "darky-last-order",
+      JSON.stringify(
+        lastOrderData
+      )
+    );
+
     const whatsappNumber =
       "94788809678";
 
@@ -327,6 +480,11 @@ Thank you,
       "_blank",
       "noopener,noreferrer"
     );
+
+    window.setTimeout(() => {
+      window.location.href =
+        "/order-success";
+    }, 500);
   }
 
   function removeDirectOrder() {
@@ -334,9 +492,69 @@ Thank you,
       "darky-direct-order"
     );
 
+    localStorage.removeItem(
+      "darky-direct-order-id"
+    );
+
     window.location.href =
       "/#shop";
   }
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-white px-6 text-black">
+        <p className="font-bold">
+          Loading order...
+        </p>
+      </main>
+    );
+  }
+
+  if (!orderItem) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-black">
+        <div>
+          <h1 className="text-4xl font-black">
+            ORDER NOT FOUND
+          </h1>
+
+          <p className="mt-4 text-gray-600">
+            Order කරන්න product එකක් තෝරලා නැහැ.
+          </p>
+
+          <a
+            href="/#shop"
+            className="mt-8 inline-block bg-black px-8 py-4 font-bold text-white transition hover:bg-gray-800"
+          >
+            BACK TO SHOP
+          </a>
+        </div>
+      </main>
+    );
+  }
+
+  const currentOrderItem =
+    orderItem;
+
+  const subtotal =
+    currentOrderItem.price *
+    currentOrderItem.quantity;
+
+  const hasFixedDeliveryFee =
+    currentOrderItem.quantity > 0 &&
+    currentOrderItem.quantity <= 5;
+
+  const deliveryFee =
+    hasFixedDeliveryFee
+      ? 350
+      : 0;
+
+  const finalTotal =
+    subtotal + deliveryFee;
+
+  const selectedColour =
+    currentOrderItem.color?.trim() ||
+    "Not selected";
 
   return (
     <main className="min-h-screen bg-gray-100 text-black">
@@ -350,7 +568,7 @@ Thank you,
 
         <a
           href="/#shop"
-          className="text-sm font-bold transition hover:text-gray-300"
+          className="text-xs font-bold transition hover:text-gray-300 sm:text-sm"
         >
           BACK TO SHOP
         </a>
@@ -365,7 +583,18 @@ Thank you,
           DELIVERY DETAILS
         </h1>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-2">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-gray-300 bg-white px-5 py-4">
+          <span className="text-sm font-bold text-gray-500">
+            ORDER ID
+          </span>
+
+          <span className="font-black tracking-wider">
+            {orderId ||
+              "Generating..."}
+          </span>
+        </div>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-2">
           <div className="bg-white p-6 shadow-sm md:p-8">
             <h2 className="text-2xl font-black">
               ORDER SUMMARY
@@ -374,15 +603,21 @@ Thank you,
             <div className="mt-7 flex flex-col gap-6 sm:flex-row">
               <div className="w-full overflow-hidden bg-gray-100 sm:w-44">
                 <img
-                  src={currentOrderItem.image}
-                  alt={currentOrderItem.name}
+                  src={
+                    currentOrderItem.image
+                  }
+                  alt={
+                    currentOrderItem.name
+                  }
                   className="aspect-square h-full w-full object-cover"
                 />
               </div>
 
               <div className="flex-1">
                 <h3 className="text-2xl font-black">
-                  {currentOrderItem.name}
+                  {
+                    currentOrderItem.name
+                  }
                 </h3>
 
                 <div className="mt-5 space-y-3 text-sm">
@@ -402,7 +637,9 @@ Thank you,
                     </span>
 
                     <span className="font-bold">
-                      {currentOrderItem.size}
+                      {
+                        currentOrderItem.size
+                      }
                     </span>
                   </div>
 
@@ -412,7 +649,9 @@ Thank you,
                     </span>
 
                     <span className="font-bold">
-                      {currentOrderItem.quantity}
+                      {
+                        currentOrderItem.quantity
+                      }
                     </span>
                   </div>
 
@@ -471,20 +710,19 @@ Thank you,
 
             {!hasFixedDeliveryFee && (
               <div className="mt-5 border border-orange-200 bg-orange-50 p-4 text-sm font-semibold leading-6 text-orange-700">
-                Products 5කට වැඩි නිසා delivery
-                fee සහ final total එක WhatsApp
-                එකෙන් confirm කරනවා.
+                Products 5කට වැඩි නිසා delivery fee සහ final total එක WhatsApp එකෙන් confirm කරනවා.
               </div>
             )}
 
             <p className="mt-5 text-sm leading-6 text-gray-500">
-              Products 1–5 සඳහා delivery fee
-              එක Rs. 350යි.
+              Products 1–5 සඳහා delivery fee එක Rs. 350යි.
             </p>
 
             <button
               type="button"
-              onClick={removeDirectOrder}
+              onClick={
+                removeDirectOrder
+              }
               className="mt-6 w-full border border-red-600 px-5 py-3 font-bold text-red-600 transition hover:bg-red-600 hover:text-white"
             >
               REMOVE THIS ORDER
@@ -492,7 +730,9 @@ Thank you,
           </div>
 
           <form
-            onSubmit={sendWhatsAppOrder}
+            onSubmit={
+              sendWhatsAppOrder
+            }
             className="bg-white p-6 shadow-sm md:p-8"
           >
             <h2 className="text-2xl font-black">
@@ -552,7 +792,9 @@ Thank you,
                 <input
                   type="tel"
                   required
-                  value={alternativePhone}
+                  value={
+                    alternativePhone
+                  }
                   onChange={(event) =>
                     setAlternativePhone(
                       event.target.value
@@ -563,8 +805,7 @@ Thank you,
                 />
 
                 <p className="mt-2 text-xs text-gray-500">
-                  Primary number එකට වෙනස් contact
-                  number එකක් දාන්න.
+                  Primary number එකට වෙනස් contact number එකක් දාන්න.
                 </p>
               </div>
 
@@ -590,10 +831,16 @@ Thank you,
                   {districts.map(
                     (districtName) => (
                       <option
-                        key={districtName}
-                        value={districtName}
+                        key={
+                          districtName
+                        }
+                        value={
+                          districtName
+                        }
                       >
-                        {districtName}
+                        {
+                          districtName
+                        }
                       </option>
                     )
                   )}
@@ -628,7 +875,9 @@ Thank you,
                 <textarea
                   value={note}
                   onChange={(event) =>
-                    setNote(event.target.value)
+                    setNote(
+                      event.target.value
+                    )
                   }
                   rows={3}
                   placeholder="Order එක ගැන විශේෂ සටහනක් තිබේ නම්"
@@ -652,9 +901,7 @@ Thank you,
               </button>
 
               <p className="text-center text-xs leading-5 text-gray-500">
-                Product, colour, size, delivery
-                fee සහ customer details WhatsApp
-                message එකට යනවා.
+                Order ID, product, colour, size, delivery fee සහ customer details WhatsApp message එකට යනවා.
               </p>
             </div>
           </form>
