@@ -1422,9 +1422,38 @@ Thank you,
                     : "PLACE ORDER & OPEN WHATSAPP"}
                 </button>
 
-                <p className="text-center text-xs leading-5 text-gray-500">
+                                <p className="text-center text-xs leading-5 text-gray-500">
                   මුලින් order එක database එකට save වෙනවා. ඊට පස්සේ WhatsApp message එක open වෙනවා.
                 </p>
+
+                <div className="border-t border-gray-200 pt-5">
+                  <p className="mb-4 text-xs font-black tracking-[0.18em] text-gray-500">
+                    NEED HELP?
+                  </p>
+
+                  <div className="flex flex-col gap-3 text-sm font-semibold text-gray-600">
+                    <a
+                      href="/delivery"
+                      className="transition hover:text-black"
+                    >
+                      DELIVERY INFORMATION
+                    </a>
+
+                    <a
+                      href="/returns"
+                      className="transition hover:text-black"
+                    >
+                      EXCHANGE & RETURN POLICY
+                    </a>
+
+                    <a
+                      href="/contact"
+                      className="transition hover:text-black"
+                    >
+                      CONTACT US
+                    </a>
+                  </div>
+                </div>
               </div>
             </form>
           </div>

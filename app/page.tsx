@@ -1306,26 +1306,97 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 bg-black px-6 py-10 text-center text-white">
-        <h2 className="text-2xl font-black tracking-[0.35em]">
-          DARKY T
-        </h2>
+            {/* Footer */}
+      <footer className="border-t border-white/10 bg-black px-6 py-12 text-white">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-10 text-center md:grid-cols-3 md:text-left">
+            {/* Brand */}
+            <div>
+              <h2 className="text-2xl font-black tracking-[0.35em]">
+                DARKY T
+              </h2>
 
-        <p className="mt-4 text-sm text-gray-400">
-          Premium Oversized Streetwear
-        </p>
+              <p className="mt-4 text-sm leading-6 text-gray-400">
+                Premium oversized streetwear designed for comfort
+                and made to stand out.
+              </p>
+            </div>
 
-        <a
-          href="#shop"
-          className="mt-6 inline-block font-semibold text-gray-400 hover:text-white"
-        >
-          SHOP
-        </a>
+            {/* Quick Links */}
+            <div>
+              <h3 className="text-sm font-black tracking-[0.2em]">
+                QUICK LINKS
+              </h3>
 
-        <p className="mt-6 text-xs text-gray-500">
-          © 2026 DARKY T. All rights reserved.
-        </p>
+              <div className="mt-5 flex flex-col gap-3 text-sm font-semibold text-gray-400">
+                <a
+                  href="/#shop"
+                  className="transition hover:text-white"
+                >
+                  SHOP PRODUCTS
+                </a>
+
+                <a
+                  href="/delivery"
+                  className="transition hover:text-white"
+                >
+                  DELIVERY INFORMATION
+                </a>
+
+                <a
+                  href="/returns"
+                  className="transition hover:text-white"
+                >
+                  EXCHANGE & RETURN POLICY
+                </a>
+
+                <a
+                  href="/contact"
+                  className="transition hover:text-white"
+                >
+                  CONTACT US
+                </a>
+              </div>
+            </div>
+
+            {/* Customer Support */}
+            <div>
+              <h3 className="text-sm font-black tracking-[0.2em]">
+                CUSTOMER SUPPORT
+              </h3>
+
+              <div className="mt-5 flex flex-col gap-3 text-sm text-gray-400">
+                <a
+                  href="https://wa.me/94788809678"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold transition hover:text-white"
+                >
+                  WHATSAPP: +94 78 880 9678
+                </a>
+
+                <a
+                  href="https://www.tiktok.com/@sasindu_nathee?_r=1&_t=ZS-981NZk7vYkz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold transition hover:text-white"
+                >
+                  TIKTOK
+                </a>
+
+                <p className="leading-6">
+                  Islandwide delivery across Sri Lanka.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 border-t border-white/10 pt-6 text-center">
+            <p className="text-xs text-gray-500">
+              © 2026 DARKY T. All rights reserved.
+            </p>
+          </div>
+        </div>
       </footer>
     </main>
   );
