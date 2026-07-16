@@ -415,20 +415,7 @@ export default function DirectOrderPage() {
       return false;
     }
 
-    if (
-      cleanPhoneNumber(
-        primaryPhone
-      ) ===
-      cleanPhoneNumber(
-        alternativePhone
-      )
-    ) {
-      setErrorMessage(
-        "Phone numbers දෙකට වෙනස් numbers දෙකක් ඇතුළත් කරන්න."
-      );
 
-      return false;
-    }
 
     if (!district.trim()) {
       setErrorMessage(
@@ -626,7 +613,7 @@ I would like to place the following direct order.
 
 • Name: ${customerName.trim()}
 • Primary Phone: ${formattedPrimaryPhone}
-• Alternative Phone: ${formattedAlternativePhone}
+• WhatsApp Number: ${formattedAlternativePhone}
 • District: ${district.trim()}
 • Delivery Address: ${address.trim()}
 • Note: ${note.trim() || "No special note"}
@@ -968,8 +955,8 @@ Thank you,
             </h2>
 
             <p className="mt-3 text-sm text-gray-500">
-              Phone numbers දෙකම අනිවාර්යයි.
-            </p>
+  Primary phone number සහ WhatsApp number දෙකම ඇතුළත් කරන්න.
+</p>
 
             <div className="mt-7 space-y-5">
               <div>
@@ -1014,8 +1001,8 @@ Thank you,
 
               <div>
                 <label className="mb-2 block text-sm font-bold">
-                  ALTERNATIVE PHONE *
-                </label>
+  WHATSAPP NUMBER *
+</label>
 
                 <input
                   type="tel"

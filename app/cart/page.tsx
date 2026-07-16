@@ -540,20 +540,7 @@ export default function CartPage() {
       return false;
     }
 
-    if (
-      cleanPhoneNumber(
-        primaryPhone
-      ) ===
-      cleanPhoneNumber(
-        alternativePhone
-      )
-    ) {
-      setErrorMessage(
-        "Phone numbers දෙකට වෙනස් numbers දෙකක් ඇතුළත් කරන්න."
-      );
 
-      return false;
-    }
 
     if (!district.trim()) {
       setErrorMessage(
@@ -1231,8 +1218,8 @@ Thank you,
               </h2>
 
               <p className="mt-3 text-sm text-gray-500">
-                Phone numbers දෙකම අනිවාර්යයි.
-              </p>
+  Primary phone number සහ WhatsApp number දෙකම ඇතුළත් කරන්න.
+</p>
 
               <div className="mt-7 space-y-5">
                 <div>
@@ -1283,8 +1270,8 @@ Thank you,
 
                 <div>
                   <label className="mb-2 block text-sm font-bold">
-                    ALTERNATIVE PHONE NUMBER *
-                  </label>
+  WHATSAPP NUMBER *
+</label>
 
                   <input
                     type="tel"
@@ -1303,8 +1290,8 @@ Thank you,
                   />
 
                   <p className="mt-2 text-xs text-gray-500">
-                    Primary number එකට වෙනස් contact number එකක් දාන්න.
-                  </p>
+  WhatsApp භාවිතා කරන number එක ඇතුළත් කරන්න. Primary number එකම වුණත් දාන්න පුළුවන්.
+</p>
                 </div>
 
                 <div>
