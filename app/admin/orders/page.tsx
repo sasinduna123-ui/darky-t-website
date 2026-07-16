@@ -6,6 +6,8 @@ import {
   useState,
 } from "react";
 
+import { jsPDF } from "jspdf";
+
 type OrderStatus =
   | "pending"
   | "confirmed"
@@ -28,6 +30,8 @@ type OrderItem = {
   quantity: number;
   unit_price: number;
   item_total: number;
+
+  image_url: string;
 
   created_at: string;
 };
@@ -123,7 +127,583 @@ function getStatusClasses(
       return "bg-gray-100 text-gray-800";
   }
 }
+async function loadImageAsDataUrl(
+  imagePath: string
+) {
+  const response = await fetch(
+    imagePath
+  );
 
+  if (!response.ok) {
+    throw new Error(
+      "Image එක load කරන්න බැරි වුණා."
+    );
+  }
+
+  const blob =
+    await response.blob();
+
+  return await new Promise<string>(
+    (resolve, reject) => {
+      const reader =
+        new FileReader();
+
+      reader.onloadend = () =>
+        resolve(
+          reader.result as string
+        );
+
+      reader.onerror = reject;
+
+      reader.readAsDataURL(
+        blob
+      );
+    }
+  );
+}
+
+async function downloadDeliveryPdf(
+  order: Order
+) {
+  try {
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a5",
+    });
+
+    const pageWidth =
+      pdf.internal.pageSize.getWidth();
+
+    const pageHeight =
+      pdf.internal.pageSize.getHeight();
+
+    const margin = 10;
+    const contentWidth =
+      pageWidth - margin * 2;
+
+    const logoDataUrl =
+      await loadImageAsDataUrl(
+        "/darky-logo.png"
+      );
+
+    pdf.setFillColor(0, 0, 0);
+    pdf.rect(
+      0,
+      0,
+      pageWidth,
+      31,
+      "F"
+    );
+
+    pdf.addImage(
+      logoDataUrl,
+      "PNG",
+      9,
+      6,
+      20,
+      20
+    );
+
+    pdf.setTextColor(
+      255,
+      255,
+      255
+    );
+
+    pdf.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    pdf.setFontSize(21);
+
+    pdf.text(
+      "DARKY T",
+      pageWidth / 2 + 5,
+      14,
+      {
+        align: "center",
+      }
+    );
+
+    pdf.setFontSize(8);
+
+    pdf.text(
+      "DELIVERY INFORMATION",
+      pageWidth / 2 + 5,
+      22,
+      {
+        align: "center",
+      }
+    );
+
+    let y = 39;
+
+    pdf.setTextColor(
+      0,
+      0,
+      0
+    );
+
+    pdf.setFillColor(
+      245,
+      245,
+      245
+    );
+
+    pdf.roundedRect(
+      margin,
+      y,
+      contentWidth,
+      15,
+      2,
+      2,
+      "F"
+    );
+
+    pdf.setFontSize(7);
+    pdf.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    pdf.text(
+      "ORDER NUMBER",
+      margin + 5,
+      y + 5
+    );
+
+    pdf.setFontSize(12);
+    pdf.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    pdf.text(
+      order.order_number,
+      margin + 5,
+      y + 11
+    );
+
+    y += 22;
+
+    pdf.setFontSize(8);
+    pdf.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    pdf.text(
+      "CUSTOMER NAME",
+      margin,
+      y
+    );
+
+    y += 7;
+
+    pdf.setFontSize(18);
+    pdf.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    const nameLines =
+      pdf.splitTextToSize(
+        order.customer_name ||
+          "—",
+        contentWidth
+      );
+
+    pdf.text(
+      nameLines,
+      margin,
+      y
+    );
+
+    y +=
+      nameLines.length * 7 +
+      7;
+
+    const addressLines =
+      pdf.splitTextToSize(
+        order.delivery_address ||
+          "—",
+        contentWidth - 10
+      );
+
+    const addressBoxHeight =
+      18 +
+      addressLines.length * 6;
+
+    pdf.setFillColor(
+      248,
+      248,
+      248
+    );
+
+    pdf.roundedRect(
+      margin,
+      y,
+      contentWidth,
+      addressBoxHeight,
+      2,
+      2,
+      "F"
+    );
+
+    pdf.setFontSize(8);
+    pdf.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    pdf.text(
+      "DELIVERY ADDRESS",
+      margin + 5,
+      y + 6
+    );
+
+    pdf.setFontSize(14);
+    pdf.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    pdf.text(
+      addressLines,
+      margin + 5,
+      y + 14
+    );
+
+    y +=
+      addressBoxHeight + 8;
+
+    const gap = 5;
+    const phoneBoxWidth =
+      (contentWidth - gap) / 2;
+
+    pdf.setFillColor(
+      245,
+      245,
+      245
+    );
+
+    pdf.roundedRect(
+      margin,
+      y,
+      phoneBoxWidth,
+      23,
+      2,
+      2,
+      "F"
+    );
+
+    pdf.roundedRect(
+      margin +
+        phoneBoxWidth +
+        gap,
+      y,
+      phoneBoxWidth,
+      23,
+      2,
+      2,
+      "F"
+    );
+
+    pdf.setFontSize(7);
+    pdf.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    pdf.text(
+      "PRIMARY PHONE",
+      margin + 4,
+      y + 6
+    );
+
+    pdf.text(
+      "WHATSAPP NUMBER",
+      margin +
+        phoneBoxWidth +
+        gap +
+        4,
+      y + 6
+    );
+
+    pdf.setFontSize(11);
+    pdf.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    pdf.text(
+      order.primary_phone ||
+        "—",
+      margin + 4,
+      y + 15
+    );
+
+    pdf.text(
+      order.alternative_phone ||
+        "—",
+      margin +
+        phoneBoxWidth +
+        gap +
+        4,
+      y + 15
+    );
+
+    y += 31;
+
+    pdf.setFontSize(8);
+    pdf.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    pdf.text(
+      "ORDER ITEMS",
+      margin,
+      y
+    );
+
+    y += 7;
+
+    for (
+      const item of
+      order.order_items ?? []
+    ) {
+      let productImageDataUrl =
+        "";
+
+      try {
+        if (item.image_url) {
+          productImageDataUrl =
+            await loadImageAsDataUrl(
+              item.image_url
+            );
+        }
+      } catch {
+        productImageDataUrl =
+          "";
+      }
+
+      const itemBoxHeight = 31;
+
+      pdf.setFillColor(
+        248,
+        248,
+        248
+      );
+
+      pdf.roundedRect(
+        margin,
+        y,
+        contentWidth,
+        itemBoxHeight,
+        2,
+        2,
+        "F"
+      );
+
+      if (
+        productImageDataUrl
+      ) {
+        pdf.addImage(
+          productImageDataUrl,
+          "JPEG",
+          margin + 4,
+          y + 4,
+          23,
+          23
+        );
+      }
+
+      const textX =
+        margin + 31;
+
+      pdf.setFontSize(10);
+      pdf.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      pdf.text(
+        item.product_name ||
+          "Product",
+        textX,
+        y + 8
+      );
+
+      pdf.setFontSize(8);
+      pdf.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      pdf.text(
+        `Colour: ${
+          item.colour_name ||
+          "—"
+        }`,
+        textX,
+        y + 15
+      );
+
+      pdf.text(
+        `Size: ${
+          item.size || "—"
+        }`,
+        textX,
+        y + 21
+      );
+
+      pdf.text(
+        `Qty: ${
+          item.quantity || 0
+        }`,
+        textX + 38,
+        y + 21
+      );
+
+      y +=
+        itemBoxHeight + 4;
+    }
+
+    pdf.setDrawColor(
+      210,
+      210,
+      210
+    );
+
+    pdf.line(
+      margin,
+      y,
+      pageWidth - margin,
+      y
+    );
+
+    y += 7;
+
+    pdf.setFontSize(9);
+    pdf.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    pdf.text(
+      `DISTRICT: ${
+        order.district || "—"
+      }`,
+      margin,
+      y
+    );
+
+    y += 7;
+
+    pdf.text(
+      `QUANTITY: ${
+        order.total_quantity ||
+        0
+      }`,
+      margin,
+      y
+    );
+
+    y += 7;
+
+    pdf.text(
+      `FINAL TOTAL: Rs. ${Number(
+        order.final_total || 0
+      ).toLocaleString()}`,
+      margin,
+      y
+    );
+
+    pdf.setFillColor(
+      0,
+      0,
+      0
+    );
+
+    pdf.rect(
+      0,
+      pageHeight - 31,
+      pageWidth,
+      31,
+      "F"
+    );
+
+    pdf.setTextColor(
+      255,
+      255,
+      255
+    );
+
+    pdf.setFontSize(8);
+    pdf.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    pdf.text(
+      "DARKY T CONTACT DETAILS",
+      pageWidth / 2,
+      pageHeight - 23,
+      {
+        align: "center",
+      }
+    );
+
+    pdf.setFontSize(7);
+    pdf.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    pdf.text(
+      "Phone / WhatsApp: 0788809678",
+      pageWidth / 2,
+      pageHeight - 17,
+      {
+        align: "center",
+      }
+    );
+
+    pdf.text(
+      "Email: sasinduna123@gmail.com",
+      pageWidth / 2,
+      pageHeight - 12,
+      {
+        align: "center",
+      }
+    );
+
+    pdf.text(
+      "Kandagaha Junction, Thanbaddegama, Ethkandura",
+      pageWidth / 2,
+      pageHeight - 7,
+      {
+        align: "center",
+      }
+    );
+
+    pdf.save(
+      `${order.order_number}-delivery.pdf`
+    );
+  } catch (error) {
+    console.error(
+      "PDF creation error:",
+      error
+    );
+
+    alert(
+      "PDF එක හදන්න බැරි වුණා. Logo file එක public/darky-logo.png ලෙස තියෙනවද බලන්න."
+    );
+  }
+}
 export default function AdminOrdersPage() {
   const [
     adminPassword,
@@ -997,7 +1577,15 @@ export default function AdminOrdersPage() {
                               )}
                             </select>
                           </div>
-
+<button
+  type="button"
+  onClick={() =>
+    downloadDeliveryPdf(order)
+  }
+  className="bg-green-600 px-5 py-3 font-black text-white hover:bg-green-700"
+>
+  DOWNLOAD DELIVERY PDF
+</button>
                           <button
                             type="button"
                             onClick={() =>

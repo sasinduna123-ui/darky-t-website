@@ -19,6 +19,59 @@ const allowedStatuses = [
 type OrderStatus =
   (typeof allowedStatuses)[number];
 
+type RelatedProduct = {
+  image?: string | null;
+  images?: string[] | null;
+};
+
+type RelatedVariant = {
+  images?: string[] | null;
+};
+
+type RawOrderItem = {
+  id: string;
+  order_id: string;
+  product_id: string;
+  variant_id: string;
+  product_name: string;
+  colour_name: string;
+  size: string;
+  quantity: number;
+  unit_price: number;
+  item_total: number;
+  created_at: string;
+
+  products?:
+    | RelatedProduct
+    | RelatedProduct[]
+    | null;
+
+  product_variants?:
+    | RelatedVariant
+    | RelatedVariant[]
+    | null;
+};
+
+type RawOrder = {
+  id: string;
+  order_number: string;
+  order_type: "cart" | "direct";
+  customer_name: string;
+  primary_phone: string;
+  alternative_phone: string;
+  district: string;
+  delivery_address: string;
+  note: string;
+  total_quantity: number;
+  subtotal: number;
+  delivery_fee: number;
+  final_total: number;
+  status: OrderStatus;
+  created_at: string;
+  updated_at: string;
+  order_items?: RawOrderItem[];
+};
+
 function isAdmin(
   request: NextRequest
 ) {
@@ -51,6 +104,89 @@ function unauthorizedResponse() {
       status: 401,
     }
   );
+}
+
+function firstArrayImage(
+  images: unknown
+) {
+  if (!Array.isArray(images)) {
+    return "";
+  }
+
+  const image =
+    images.find(
+      (value) =>
+        typeof value ===
+          "string" &&
+        value.trim() !== ""
+    );
+
+  return typeof image ===
+    "string"
+    ? image.trim()
+    : "";
+}
+
+function getSingleRelation<T>(
+  relation:
+    | T
+    | T[]
+    | null
+    | undefined
+): T | null {
+  if (!relation) {
+    return null;
+  }
+
+  if (Array.isArray(relation)) {
+    return relation[0] ?? null;
+  }
+
+  return relation;
+}
+
+function getOrderItemImage(
+  item: RawOrderItem
+) {
+  const variant =
+    getSingleRelation(
+      item.product_variants
+    );
+
+  const product =
+    getSingleRelation(
+      item.products
+    );
+
+  const variantImage =
+    firstArrayImage(
+      variant?.images
+    );
+
+  if (variantImage) {
+    return variantImage;
+  }
+
+  const productMainImage =
+    typeof product?.image ===
+      "string"
+      ? product.image.trim()
+      : "";
+
+  if (productMainImage) {
+    return productMainImage;
+  }
+
+  const productGalleryImage =
+    firstArrayImage(
+      product?.images
+    );
+
+  if (productGalleryImage) {
+    return productGalleryImage;
+  }
+
+  return "/images/product-image.jpg";
 }
 
 /*
@@ -101,7 +237,14 @@ export async function GET(
           quantity,
           unit_price,
           item_total,
-          created_at
+          created_at,
+          products (
+            image,
+            images
+          ),
+          product_variants (
+            images
+          )
         )
       `)
       .order(
@@ -117,8 +260,64 @@ export async function GET(
       );
     }
 
+    const rawOrders =
+      (data ?? []) as RawOrder[];
+
+    const orders =
+      rawOrders.map(
+        (order) => ({
+          ...order,
+
+          order_items:
+            (
+              order.order_items ??
+              []
+            ).map(
+              (item) => ({
+                id:
+                  item.id,
+
+                order_id:
+                  item.order_id,
+
+                product_id:
+                  item.product_id,
+
+                variant_id:
+                  item.variant_id,
+
+                product_name:
+                  item.product_name,
+
+                colour_name:
+                  item.colour_name,
+
+                size:
+                  item.size,
+
+                quantity:
+                  item.quantity,
+
+                unit_price:
+                  item.unit_price,
+
+                item_total:
+                  item.item_total,
+
+                created_at:
+                  item.created_at,
+
+                image_url:
+                  getOrderItemImage(
+                    item
+                  ),
+              })
+            ),
+        })
+      );
+
     return NextResponse.json({
-      orders: data ?? [],
+      orders,
     });
   } catch (error) {
     const message =
@@ -161,13 +360,13 @@ export async function PATCH(
 
     const orderId =
       typeof body.orderId ===
-      "string"
+        "string"
         ? body.orderId.trim()
         : "";
 
     const status =
       typeof body.status ===
-      "string"
+        "string"
         ? body.status.trim()
         : "";
 
@@ -202,11 +401,6 @@ export async function PATCH(
     const supabase =
       createAdminClient();
 
-    /*
-      Supabase SQL function එක run කරනවා.
-      Status සහ stock දෙකම transaction එකකින්
-      update වෙනවා.
-    */
     const {
       data: stockResult,
       error: stockError,
@@ -227,9 +421,6 @@ export async function PATCH(
       );
     }
 
-    /*
-      Update වුණ order එක නැවත load කරනවා.
-    */
     const {
       data: updatedOrder,
       error: orderLoadError,
@@ -298,7 +489,7 @@ export async function DELETE(
 
     const orderId =
       typeof body.orderId ===
-      "string"
+        "string"
         ? body.orderId.trim()
         : "";
 
@@ -317,11 +508,6 @@ export async function DELETE(
     const supabase =
       createAdminClient();
 
-    /*
-      මුලින් order එකේ status එක බලනවා.
-      Stock අඩු කරපු order එකක් delete කරනකොට
-      stock නැවත restore කරනවා.
-    */
     const {
       data: existingOrder,
       error:
@@ -378,10 +564,6 @@ export async function DELETE(
       }
     }
 
-    /*
-      Foreign key cascade නැති වුණත්
-      වැඩ කරන්න order items මුලින් delete කරනවා.
-    */
     const {
       error:
         orderItemsDeleteError,
