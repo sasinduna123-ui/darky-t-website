@@ -1123,16 +1123,16 @@ export default function AdminOrdersPage() {
 
                               <p>
                                 <strong>
-                                  Alternative phone:
-                                </strong>{" "}
-                                <a
-                                  href={`tel:${order.alternative_phone}`}
-                                  className="underline"
-                                >
-                                  {
-                                    order.alternative_phone
-                                  }
-                                </a>
+  WhatsApp number:
+</strong>{" "}
+<a
+  href={`https://wa.me/${order.alternative_phone.replace(/\D/g, "")}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="underline"
+>
+  {order.alternative_phone}
+</a>
                               </p>
 
                               <p>
