@@ -1110,11 +1110,185 @@ export default function AdminOrdersPage() {
       orderTypeFilter,
     ]);
 
-  const stats =
+  const dashboard =
     useMemo(() => {
+      const now = new Date();
+
+      const startOfToday =
+        new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+
+      const startOfMonth =
+        new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          1
+        );
+
+      const validOrders =
+        orders.filter(
+          (order) =>
+            order.status !==
+            "cancelled"
+        );
+
+      const todayOrders =
+        orders.filter(
+          (order) =>
+            new Date(
+              order.created_at
+            ) >= startOfToday
+        );
+
+      const monthOrders =
+        validOrders.filter(
+          (order) =>
+            new Date(
+              order.created_at
+            ) >= startOfMonth
+        );
+
+      const revenue =
+        validOrders.reduce(
+          (
+            total,
+            order
+          ) =>
+            total +
+            Number(
+              order.final_total ||
+                0
+            ),
+          0
+        );
+
+      const monthRevenue =
+        monthOrders.reduce(
+          (
+            total,
+            order
+          ) =>
+            total +
+            Number(
+              order.final_total ||
+                0
+            ),
+          0
+        );
+
+      const totalItems =
+        validOrders.reduce(
+          (
+            total,
+            order
+          ) =>
+            total +
+            Number(
+              order.total_quantity ||
+                0
+            ),
+          0
+        );
+
+      const productMap =
+        new Map<
+          string,
+          {
+            name: string;
+            quantity: number;
+            revenue: number;
+          }
+        >();
+
+      validOrders.forEach(
+        (order) => {
+          (
+            order.order_items ??
+            []
+          ).forEach(
+            (item) => {
+              const key =
+                item.product_id ||
+                item.product_name;
+
+              const current =
+                productMap.get(
+                  key
+                ) || {
+                  name:
+                    item.product_name ||
+                    "Product",
+                  quantity: 0,
+                  revenue: 0,
+                };
+
+              current.quantity +=
+                Number(
+                  item.quantity ||
+                    0
+                );
+
+              current.revenue +=
+                Number(
+                  item.item_total ||
+                    0
+                );
+
+              productMap.set(
+                key,
+                current
+              );
+            }
+          );
+        }
+      );
+
+      const bestSellingProducts =
+        Array.from(
+          productMap.values()
+        )
+          .sort(
+            (a, b) =>
+              b.quantity -
+              a.quantity
+          )
+          .slice(0, 5);
+
+      const recentOrders =
+        [...orders]
+          .sort(
+            (a, b) =>
+              new Date(
+                b.created_at
+              ).getTime() -
+              new Date(
+                a.created_at
+              ).getTime()
+          )
+          .slice(0, 5);
+
+      const statusCounts =
+        statuses.map(
+          (status) => ({
+            status,
+            count:
+              orders.filter(
+                (order) =>
+                  order.status ===
+                  status
+              ).length,
+          })
+        );
+
       return {
         total:
           orders.length,
+
+        today:
+          todayOrders.length,
 
         pending:
           orders.filter(
@@ -1137,25 +1311,26 @@ export default function AdminOrdersPage() {
               "delivered"
           ).length,
 
-        revenue:
-          orders
-            .filter(
-              (order) =>
-                order.status !==
-                "cancelled"
-            )
-            .reduce(
-              (
-                total,
-                order
-              ) =>
-                total +
-                Number(
-                  order.final_total ||
-                    0
-                ),
-              0
-            ),
+        cancelled:
+          orders.filter(
+            (order) =>
+              order.status ===
+              "cancelled"
+          ).length,
+
+        revenue,
+        monthRevenue,
+        totalItems,
+
+        averageOrder:
+          validOrders.length > 0
+            ? revenue /
+              validOrders.length
+            : 0,
+
+        bestSellingProducts,
+        recentOrders,
+        statusCounts,
       };
     }, [orders]);
 
@@ -1320,58 +1495,281 @@ export default function AdminOrdersPage() {
           </div>
         )}
 
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <div className="bg-white p-6 shadow-sm">
             <p className="text-sm font-bold text-gray-500">
               TOTAL ORDERS
             </p>
-
             <p className="mt-3 text-4xl font-black">
-              {stats.total}
+              {dashboard.total}
             </p>
           </div>
 
           <div className="bg-white p-6 shadow-sm">
             <p className="text-sm font-bold text-gray-500">
-              PENDING
+              TODAY ORDERS
             </p>
-
-            <p className="mt-3 text-4xl font-black text-yellow-600">
-              {stats.pending}
+            <p className="mt-3 text-4xl font-black text-purple-600">
+              {dashboard.today}
             </p>
           </div>
 
           <div className="bg-white p-6 shadow-sm">
             <p className="text-sm font-bold text-gray-500">
-              CONFIRMED
+              TOTAL ITEMS SOLD
             </p>
-
             <p className="mt-3 text-4xl font-black text-blue-600">
-              {stats.confirmed}
-            </p>
-          </div>
-
-          <div className="bg-white p-6 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">
-              DELIVERED
-            </p>
-
-            <p className="mt-3 text-4xl font-black text-green-600">
-              {stats.delivered}
+              {dashboard.totalItems}
             </p>
           </div>
 
           <div className="bg-black p-6 text-white shadow-sm">
             <p className="text-sm font-bold text-gray-300">
-              TOTAL VALUE
+              TOTAL REVENUE
             </p>
-
             <p className="mt-3 text-2xl font-black">
               {formatMoney(
-                stats.revenue
+                dashboard.revenue
               )}
             </p>
           </div>
+
+          <div className="bg-white p-6 shadow-sm">
+            <p className="text-sm font-bold text-gray-500">
+              THIS MONTH REVENUE
+            </p>
+            <p className="mt-3 text-2xl font-black text-green-600">
+              {formatMoney(
+                dashboard.monthRevenue
+              )}
+            </p>
+          </div>
+
+          <div className="bg-white p-6 shadow-sm">
+            <p className="text-sm font-bold text-gray-500">
+              AVERAGE ORDER VALUE
+            </p>
+            <p className="mt-3 text-2xl font-black">
+              {formatMoney(
+                dashboard.averageOrder
+              )}
+            </p>
+          </div>
+
+          <div className="bg-white p-6 shadow-sm">
+            <p className="text-sm font-bold text-gray-500">
+              PENDING ORDERS
+            </p>
+            <p className="mt-3 text-4xl font-black text-yellow-600">
+              {dashboard.pending}
+            </p>
+          </div>
+
+          <div className="bg-white p-6 shadow-sm">
+            <p className="text-sm font-bold text-gray-500">
+              CANCELLED ORDERS
+            </p>
+            <p className="mt-3 text-4xl font-black text-red-600">
+              {dashboard.cancelled}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <div className="bg-white p-6 shadow-sm md:p-8">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold tracking-[0.25em] text-gray-500">
+                  SALES
+                </p>
+                <h2 className="mt-2 text-2xl font-black">
+                  BEST SELLING PRODUCTS
+                </h2>
+              </div>
+            </div>
+
+            {dashboard.bestSellingProducts.length ===
+            0 ? (
+              <p className="mt-6 text-gray-500">
+                Product sales data නැහැ.
+              </p>
+            ) : (
+              <div className="mt-6 space-y-4">
+                {dashboard.bestSellingProducts.map(
+                  (
+                    product,
+                    index
+                  ) => (
+                    <div
+                      key={`${product.name}-${index}`}
+                      className="flex items-center justify-between gap-5 border-b pb-4 last:border-b-0 last:pb-0"
+                    >
+                      <div className="flex min-w-0 items-center gap-4">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-black font-black text-white">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-black">
+                            {product.name}
+                          </p>
+                          <p className="mt-1 text-sm text-gray-500">
+                            {product.quantity} items sold
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="shrink-0 font-black">
+                        {formatMoney(
+                          product.revenue
+                        )}
+                      </p>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white p-6 shadow-sm md:p-8">
+            <p className="text-xs font-bold tracking-[0.25em] text-gray-500">
+              OVERVIEW
+            </p>
+            <h2 className="mt-2 text-2xl font-black">
+              ORDER STATUS SUMMARY
+            </h2>
+
+            <div className="mt-6 space-y-4">
+              {dashboard.statusCounts.map(
+                (item) => {
+                  const percentage =
+                    dashboard.total > 0
+                      ? Math.round(
+                          (item.count /
+                            dashboard.total) *
+                            100
+                        )
+                      : 0;
+
+                  return (
+                    <div
+                      key={
+                        item.status
+                      }
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-4">
+                        <span className="font-black uppercase">
+                          {item.status}
+                        </span>
+                        <span className="text-sm font-bold text-gray-500">
+                          {item.count} ({percentage}%)
+                        </span>
+                      </div>
+
+                      <div className="h-3 overflow-hidden bg-gray-200">
+                        <div
+                          className="h-full bg-black"
+                          style={{
+                            width: `${percentage}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 bg-white p-6 shadow-sm md:p-8">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-[0.25em] text-gray-500">
+                LATEST ACTIVITY
+              </p>
+              <h2 className="mt-2 text-2xl font-black">
+                RECENT ORDERS
+              </h2>
+            </div>
+
+            <p className="text-sm font-bold text-gray-500">
+              Latest 5 orders
+            </p>
+          </div>
+
+          {dashboard.recentOrders.length ===
+          0 ? (
+            <p className="mt-6 text-gray-500">
+              Orders නැහැ.
+            </p>
+          ) : (
+            <div className="mt-6 overflow-x-auto">
+              <table className="min-w-full text-left">
+                <thead>
+                  <tr className="bg-black text-white">
+                    <th className="px-4 py-3">
+                      Order
+                    </th>
+                    <th className="px-4 py-3">
+                      Customer
+                    </th>
+                    <th className="px-4 py-3">
+                      Status
+                    </th>
+                    <th className="px-4 py-3">
+                      Items
+                    </th>
+                    <th className="px-4 py-3">
+                      Total
+                    </th>
+                    <th className="px-4 py-3">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {dashboard.recentOrders.map(
+                    (order) => (
+                      <tr
+                        key={order.id}
+                        className="border-b"
+                      >
+                        <td className="px-4 py-4 font-black">
+                          {order.order_number}
+                        </td>
+                        <td className="px-4 py-4">
+                          {order.customer_name}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`inline-block px-3 py-1 text-xs font-black uppercase ${getStatusClasses(
+                              order.status
+                            )}`}
+                          >
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          {order.total_quantity}
+                        </td>
+                        <td className="px-4 py-4 font-black">
+                          {formatMoney(
+                            order.final_total
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-500">
+                          {formatDate(
+                            order.created_at
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="mt-8 grid gap-5 bg-white p-6 shadow-sm md:grid-cols-3">
