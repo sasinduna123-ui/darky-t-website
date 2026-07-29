@@ -52,6 +52,7 @@ type DatabaseProductRow = {
   category: string;
   product_type: ProductType;
   price: number;
+  sale_price: number | null;
   image: string;
   images: unknown;
   description: string;
@@ -328,6 +329,11 @@ export default function AdminPage() {
   ] = useState("3490");
 
   const [
+    salePrice,
+    setSalePrice,
+  ] = useState("");
+
+  const [
     description,
     setDescription,
   ] = useState("");
@@ -464,6 +470,7 @@ export default function AdminPage() {
     setShortName("");
     setCategory("Oversized T-Shirt");
     setPrice("3490");
+    setSalePrice("");
     setDescription("");
 
     setFeatures([
@@ -503,6 +510,7 @@ export default function AdminPage() {
     if (type === "tshirt") {
       setCategory("Oversized T-Shirt");
       setPrice("3490");
+      setSalePrice("");
 
       setFeatures([
         ...tshirtFeatures,
@@ -510,6 +518,7 @@ export default function AdminPage() {
     } else {
       setCategory("Pants");
       setPrice("4950");
+      setSalePrice("");
 
       setFeatures([
         ...pantsFeatures,
@@ -709,6 +718,13 @@ export default function AdminPage() {
 
     setPrice(
       String(product.price)
+    );
+
+    setSalePrice(
+      product.sale_price === null ||
+      product.sale_price === undefined
+        ? ""
+        : String(product.sale_price)
     );
 
     setDescription(
@@ -1207,6 +1223,26 @@ export default function AdminPage() {
       return false;
     }
 
+    const numericSalePrice =
+      salePrice.trim()
+        ? Number(salePrice)
+        : null;
+
+    if (
+      numericSalePrice !== null &&
+      (
+        numericSalePrice <= 0 ||
+        numericSalePrice >= Number(price)
+      )
+    ) {
+      showMessage(
+        "Sale price එක regular price එකට වඩා අඩු positive value එකක් වෙන්න ඕන.",
+        "error"
+      );
+
+      return false;
+    }
+
     if (
       variants.length === 0
     ) {
@@ -1313,6 +1349,11 @@ export default function AdminPage() {
 
       price:
         Number(price),
+
+      salePrice:
+        salePrice.trim()
+          ? Number(salePrice)
+          : null,
 
       image:
         firstImages[0],
@@ -1874,7 +1915,7 @@ export default function AdminPage() {
 
                 <div>
                   <label className="mb-2 block text-sm font-bold">
-                    PRICE
+                    REGULAR PRICE
                   </label>
 
                   <input
@@ -1889,6 +1930,29 @@ export default function AdminPage() {
                     }
                     className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
                   />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold">
+                    SALE PRICE
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={salePrice}
+                    onChange={(event) =>
+                      setSalePrice(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Leave empty when there is no sale"
+                    className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                  />
+
+                  <p className="mt-2 text-xs leading-5 text-gray-500">
+                    Sale එකක් නැත්නම් මේ field එක හිස්ව තියන්න. Sale price එක regular price එකට වඩා අඩු වෙන්න ඕන.
+                  </p>
                 </div>
 
                 <div>
@@ -2415,13 +2479,45 @@ export default function AdminPage() {
                   "PRODUCT NAME"}
               </h2>
 
-              <p className="mt-2 text-xl font-black">
-                Rs.{" "}
-                {(
-                  Number(price) ||
-                  0
-                ).toLocaleString()}
-              </p>
+              {salePrice.trim() &&
+              Number(salePrice) > 0 &&
+              Number(salePrice) <
+                Number(price) ? (
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <p className="text-2xl font-black text-red-600">
+                    Rs.{" "}
+                    {Number(
+                      salePrice
+                    ).toLocaleString()}
+                  </p>
+
+                  <p className="text-lg font-bold text-gray-400 line-through">
+                    Rs.{" "}
+                    {(
+                      Number(price) ||
+                      0
+                    ).toLocaleString()}
+                  </p>
+
+                  <span className="bg-red-600 px-3 py-1 text-xs font-black text-white">
+                    {Math.round(
+                      ((Number(price) -
+                        Number(salePrice)) /
+                        Number(price)) *
+                        100
+                    )}
+                    % OFF
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-2 text-xl font-black">
+                  Rs.{" "}
+                  {(
+                    Number(price) ||
+                    0
+                  ).toLocaleString()}
+                </p>
+              )}
 
               <div className="mt-5 flex flex-wrap gap-3">
                 {variants.map(

@@ -26,16 +26,6 @@ export type ProductType =
 /*
   category එකට ඕනෑම ඇඳුම් වර්ගයක නමක්
   දාන්න පුළුවන්.
-
-  උදාහරණ:
-  T-Shirt
-  Oversized T-Shirt
-  Shirt
-  Hoodie
-  Jacket
-  Pants
-  Jeans
-  Shorts
 */
 export type ProductCategory = string;
 
@@ -86,11 +76,21 @@ type ProductBase = {
   */
   category: ProductCategory;
 
+  /*
+    සාමාන්‍ය price එක.
+    Sale එකක් නැත්නම් customer pay කරන price එක මේකයි.
+  */
   price: number;
 
   /*
-    Homepage සහ cart එකේ පෙන්වන
-    main photo එක
+    Sale price එක optional.
+    price එකට වඩා අඩු positive number එකක් තිබුණොත්
+    website එකේ SALE price එක ලෙස පෙන්වයි.
+  */
+  salePrice?: number | null;
+
+  /*
+    Homepage සහ cart එකේ පෙන්වන main photo එක
   */
   image: string;
 
@@ -128,6 +128,46 @@ export type PantsProduct =
 export type Product =
   | TshirtProduct
   | PantsProduct;
+
+/* ==================================================
+   SALE HELPERS
+================================================== */
+
+export function hasProductDiscount(
+  product: Product
+): boolean {
+  const salePrice = Number(
+    product.salePrice || 0
+  );
+
+  return (
+    salePrice > 0 &&
+    salePrice < Number(product.price)
+  );
+}
+
+export function getProductSellingPrice(
+  product: Product
+): number {
+  return hasProductDiscount(product)
+    ? Number(product.salePrice)
+    : Number(product.price);
+}
+
+export function getProductDiscountPercentage(
+  product: Product
+): number {
+  if (!hasProductDiscount(product)) {
+    return 0;
+  }
+
+  return Math.round(
+    ((product.price -
+      Number(product.salePrice)) /
+      product.price) *
+      100
+  );
+}
 
 /* ==================================================
    DEFAULT T-SHIRT SIZE GUIDE
@@ -234,17 +274,20 @@ export const products: Product[] = [
 
     shortName: "MONSTER",
 
-    /*
-      Size guide type එක
-    */
     productType: "tshirt",
 
-    /*
-      Website category එක
-    */
     category: "Oversized T-Shirt",
 
     price: 3490,
+
+    /*
+      Sale එකක් දාන්න ඕන නම්:
+      salePrice: 2990,
+
+      Sale එකක් නැත්නම්:
+      salePrice: null,
+    */
+    salePrice: null,
 
     image:
       "/images/tshirt-white-1.jpg",

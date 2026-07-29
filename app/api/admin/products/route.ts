@@ -42,6 +42,7 @@ type ProductInput = {
     | "pants";
 
   price: number;
+  salePrice?: number | null;
   image: string;
   images: string[];
 
@@ -183,6 +184,17 @@ function validateProduct(
     Number(product.price) <= 0
   ) {
     return "Product price එක invalid.";
+  }
+
+  const salePrice = Number(
+    product.salePrice || 0
+  );
+
+  if (
+    salePrice > 0 &&
+    salePrice >= Number(product.price)
+  ) {
+    return "Sale price එක regular price එකට වඩා අඩු වෙන්න ඕන.";
   }
 
   if (
@@ -384,6 +396,7 @@ export async function GET(
         product_type,
         category,
         price,
+        sale_price,
         image,
         images,
         description,
@@ -527,6 +540,13 @@ export async function POST(
               product.price
             )
           ),
+
+        sale_price:
+          Number(product.salePrice || 0) > 0
+            ? Math.floor(
+                Number(product.salePrice)
+              )
+            : null,
 
         image:
           mainImage,
@@ -731,6 +751,13 @@ export async function PUT(
               product.price
             )
           ),
+
+        sale_price:
+          Number(product.salePrice || 0) > 0
+            ? Math.floor(
+                Number(product.salePrice)
+              )
+            : null,
 
         image:
           mainImage,
