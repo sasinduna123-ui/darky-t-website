@@ -430,11 +430,11 @@ export default function Home() {
     <main className="min-h-screen bg-black text-white">
       {/* Navbar */}
       <nav className="relative z-50 border-b border-white/10 bg-black">
-        <div className="flex items-center justify-between px-4 py-4 sm:px-6 md:px-12">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 md:px-12">
           <a
             href="#home"
             onClick={closeMenu}
-            className="text-lg font-black tracking-[0.18em] sm:text-2xl sm:tracking-[0.25em] md:text-3xl"
+            className="shrink-0 text-base font-black tracking-[0.16em] sm:text-2xl sm:tracking-[0.25em] md:text-3xl"
           >
             DARKY T
           </a>
@@ -477,10 +477,10 @@ export default function Home() {
             </a>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <a
               href="/cart"
-              className="whitespace-nowrap rounded-full bg-white px-4 py-2 text-xs font-black text-black transition hover:scale-105 hover:bg-gray-200 sm:px-5 sm:py-3 sm:text-sm"
+              className="whitespace-nowrap rounded-full bg-white px-3 py-2 text-[11px] font-black text-black transition hover:scale-105 hover:bg-gray-200 sm:px-5 sm:py-3 sm:text-sm"
             >
               CART ({cartCount})
             </a>
@@ -493,7 +493,7 @@ export default function Home() {
                     !current
                 )
               }
-              className="flex h-10 w-10 items-center justify-center border border-white/30 text-2xl lg:hidden"
+              className="flex h-9 w-9 items-center justify-center border border-white/30 text-xl lg:hidden sm:h-10 sm:w-10 sm:text-2xl"
               aria-label={
                 menuOpen
                   ? "Close menu"
@@ -509,7 +509,7 @@ export default function Home() {
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="absolute left-0 top-full w-full border-t border-white/10 bg-black px-5 py-6 shadow-2xl lg:hidden">
+          <div className="absolute left-0 top-full w-full border-t border-white/10 bg-black px-5 py-4 shadow-2xl lg:hidden">
             <div className="flex flex-col">
               <a
                 href="#home"
@@ -558,18 +558,18 @@ export default function Home() {
       {/* Hero Section */}
       <section
         id="home"
-        className="relative flex min-h-[85vh] items-center justify-center bg-cover bg-center px-5 text-center"
+        className="relative flex min-h-[72vh] items-center justify-center bg-cover bg-center px-5 py-16 text-center sm:min-h-[82vh] sm:py-20"
         style={{
           backgroundImage:
             "linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.78)), url('/images/hero.jpg')",
         }}
       >
         <div className="max-w-4xl">
-          <p className="mb-5 text-xs font-semibold tracking-[0.3em] text-gray-300 sm:text-sm sm:tracking-[0.4em]">
+          <p className="mb-4 text-[11px] font-semibold tracking-[0.25em] text-gray-300 sm:mb-5 sm:text-sm sm:tracking-[0.4em]">
             PREMIUM STREETWEAR
           </p>
 
-          <h1 className="text-4xl font-black leading-tight sm:text-6xl md:text-8xl">
+          <h1 className="text-[2.6rem] font-black leading-[0.95] sm:text-6xl md:text-8xl">
             PREMIUM
             <br />
             OVERSIZED
@@ -577,23 +577,23 @@ export default function Home() {
             STREETWEAR
           </h1>
 
-          <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-gray-300 sm:text-lg">
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-6 text-gray-300 sm:mt-6 sm:text-lg sm:leading-7">
             Designed for comfort.
             <br />
             Made to stand out.
           </p>
 
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
+          <div className="mt-8 grid w-full gap-3 sm:mt-10 sm:flex sm:flex-wrap sm:justify-center sm:gap-4">
             <a
               href="#shop"
-              className="whitespace-nowrap rounded-full bg-white px-7 py-4 text-sm font-black text-black transition hover:scale-105 hover:bg-gray-200 sm:px-8 sm:text-base"
+              className="w-full whitespace-nowrap rounded-full bg-white px-7 py-4 text-sm font-black text-black transition hover:scale-105 hover:bg-gray-200 sm:w-auto sm:px-8 sm:text-base"
             >
               SHOP NOW
             </a>
 
             <a
               href="/cart"
-              className="whitespace-nowrap rounded-full border-2 border-white px-7 py-4 text-sm font-black text-white transition hover:bg-white hover:text-black sm:px-8 sm:text-base"
+              className="w-full whitespace-nowrap rounded-full border-2 border-white px-7 py-4 text-sm font-black text-white transition hover:bg-white hover:text-black sm:w-auto sm:px-8 sm:text-base"
             >
               VIEW CART ({cartCount})
             </a>
@@ -604,7 +604,7 @@ export default function Home() {
       {/* Products Section */}
       <section
         id="shop"
-        className="bg-white px-5 py-20 text-black sm:px-6 md:px-12"
+        className="bg-white px-4 py-14 text-black sm:px-6 sm:py-20 md:px-12"
       >
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
@@ -613,7 +613,7 @@ export default function Home() {
 
           <div className="mt-3 flex flex-col justify-between gap-5 md:flex-row md:items-end">
             <div>
-              <h2 className="text-4xl font-black md:text-5xl">
+              <h2 className="text-3xl font-black sm:text-4xl md:text-5xl">
                 SHOP PRODUCTS
               </h2>
 
@@ -680,8 +680,8 @@ export default function Home() {
             !productsError && (
               <>
                 {/* Search and Filters */}
-                <div className="mt-10 border border-gray-200 bg-gray-50 p-5 md:p-7">
-                  <div className="grid gap-5 lg:grid-cols-[1.4fr_0.8fr_0.8fr]">
+                <div className="mt-8 border border-gray-200 bg-gray-50 p-4 sm:mt-10 sm:p-5 md:p-7">
+                  <div className="grid gap-4 sm:gap-5 lg:grid-cols-[1.4fr_0.8fr_0.8fr]">
                     {/* Search */}
                     <div>
                       <label className="mb-2 block text-xs font-black tracking-[0.18em] text-gray-500">
@@ -704,7 +704,7 @@ export default function Home() {
                             )
                           }
                           placeholder="Search name, category, colour, size or price..."
-                          className="w-full border border-gray-300 bg-white px-4 py-4 pr-12 outline-none transition focus:border-black"
+                          className="w-full border border-gray-300 bg-white px-4 py-3.5 pr-12 text-sm outline-none transition focus:border-black sm:py-4 sm:text-base"
                         />
 
                         {searchText && (
@@ -743,7 +743,7 @@ export default function Home() {
                               .value as StockFilter
                           )
                         }
-                        className="w-full border border-gray-300 bg-white px-4 py-4 outline-none transition focus:border-black"
+                        className="w-full border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-black sm:py-4 sm:text-base"
                       >
                         <option value="all">
                           ALL PRODUCTS
@@ -778,7 +778,7 @@ export default function Home() {
                               .value as SortOption
                           )
                         }
-                        className="w-full border border-gray-300 bg-white px-4 py-4 outline-none transition focus:border-black"
+                        className="w-full border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-black sm:py-4 sm:text-base"
                       >
                         <option value="default">
                           DEFAULT
@@ -805,7 +805,7 @@ export default function Home() {
                       CATEGORY
                     </p>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex gap-2 overflow-x-auto pb-2 sm:flex-wrap sm:overflow-visible sm:pb-0">
                       <button
                         type="button"
                         onClick={() =>
@@ -813,7 +813,7 @@ export default function Home() {
                             "all"
                           )
                         }
-                        className={`border px-5 py-3 text-sm font-black transition ${
+                        className={`shrink-0 border px-4 py-2.5 text-xs font-black transition sm:px-5 sm:py-3 sm:text-sm ${
                           productFilter ===
                           "all"
                             ? "border-black bg-black text-white"
@@ -833,7 +833,7 @@ export default function Home() {
                                 category
                               )
                             }
-                            className={`border px-5 py-3 text-sm font-black uppercase transition ${
+                            className={`shrink-0 border px-4 py-2.5 text-xs font-black uppercase transition sm:px-5 sm:py-3 sm:text-sm ${
                               productFilter ===
                               category
                                 ? "border-black bg-black text-white"
@@ -877,7 +877,7 @@ export default function Home() {
                 {/* Products */}
                 {filteredProducts.length >
                 0 ? (
-                  <div className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="mt-8 grid gap-x-5 gap-y-10 sm:mt-10 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-12 lg:grid-cols-3">
                     {filteredProducts.map(
                       (product) => {
                         const totalStock =
@@ -974,19 +974,19 @@ export default function Home() {
                               )}
                             </a>
 
-                            <div className="mt-5">
-                              <div className="flex items-start justify-between gap-4">
+                            <div className="mt-4 sm:mt-5">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                                 <a
                                   href={`/product/${product.slug}`}
                                 >
-                                  <h3 className="text-xl font-black uppercase hover:underline">
+                                  <h3 className="text-lg font-black uppercase hover:underline sm:text-xl">
                                     {
                                       product.name
                                     }
                                   </h3>
                                 </a>
 
-                                <div className="whitespace-nowrap text-right">
+                                <div className="whitespace-nowrap text-left sm:text-right">
                                   {isOnSale ? (
                                     <>
                                       <p className="text-sm font-bold text-gray-400 line-through">
@@ -1150,7 +1150,7 @@ export default function Home() {
       {/* Reviews */}
       <section
         id="reviews"
-        className="bg-gray-100 px-6 py-20 text-black md:px-12"
+        className="bg-gray-100 px-4 py-14 text-black sm:px-6 sm:py-20 md:px-12"
       >
         <div className="mx-auto max-w-7xl">
           <div className="text-center">
@@ -1167,7 +1167,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="mt-9 grid gap-5 sm:mt-12 sm:gap-6 md:grid-cols-3">
             <div className="flex h-full flex-col justify-between bg-white p-7 shadow-sm">
               <div>
                 <div className="text-xl tracking-[0.2em]">
@@ -1255,9 +1255,9 @@ export default function Home() {
       {/* About */}
       <section
         id="about"
-        className="bg-black px-6 py-20 text-white md:px-12"
+        className="bg-black px-4 py-14 text-white sm:px-6 sm:py-20 md:px-12"
       >
-        <div className="mx-auto grid max-w-7xl gap-12 md:grid-cols-2">
+        <div className="mx-auto grid max-w-7xl gap-8 sm:gap-12 md:grid-cols-2">
           <div>
             <p className="text-sm tracking-[0.3em] text-gray-400">
               ABOUT DARKY T
@@ -1277,7 +1277,7 @@ export default function Home() {
               comfort and bold designs.
             </p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <div className="border border-white/20 p-5">
                 <h3 className="text-xl font-black">
                   240 GSM
@@ -1325,7 +1325,7 @@ export default function Home() {
       {/* Contact */}
       <section
         id="contact"
-        className="bg-white px-6 py-20 text-black md:px-12"
+        className="bg-white px-4 py-14 text-black sm:px-6 sm:py-20 md:px-12"
       >
         <div className="mx-auto max-w-7xl text-center">
           <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
