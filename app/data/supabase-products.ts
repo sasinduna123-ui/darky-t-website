@@ -30,15 +30,20 @@ type DatabaseProductRow = {
   slug: string;
   name: string;
   short_name: string;
+
   product_type:
     | "tshirt"
     | "pants";
+
+  category: string;
+
   price: number;
   image: string;
   images: unknown;
   description: string;
   features: unknown;
   size_guide: unknown;
+
   product_variants:
     | DatabaseVariantRow[]
     | null;
@@ -73,7 +78,8 @@ function convertImages(
 
   return value.filter(
     (item): item is string =>
-      typeof item === "string"
+      typeof item === "string" &&
+      item.trim() !== ""
   );
 }
 
@@ -86,7 +92,8 @@ function convertFeatures(
 
   return value.filter(
     (item): item is string =>
-      typeof item === "string"
+      typeof item === "string" &&
+      item.trim() !== ""
   );
 }
 
@@ -123,8 +130,12 @@ function convertVariant(
   variant: DatabaseVariantRow
 ): ColorVariant {
   return {
-    name: variant.name,
-    slug: variant.slug,
+    name:
+      variant.name,
+
+    slug:
+      variant.slug,
+
     hex:
       variant.hex ||
       "#000000",
@@ -165,18 +176,33 @@ function convertProduct(
     "/images/product-image.jpg";
 
   const commonProduct = {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
+    id:
+      row.id,
+
+    slug:
+      row.slug,
+
+    name:
+      row.name,
 
     shortName:
       row.short_name ||
       row.name,
 
+    category:
+      row.category?.trim() ||
+      (
+        row.product_type ===
+        "pants"
+          ? "Pants"
+          : "T-Shirt"
+      ),
+
     price:
       Number(row.price) || 0,
 
-    image: mainImage,
+    image:
+      mainImage,
 
     images:
       productImages.length > 0
@@ -206,7 +232,8 @@ function convertProduct(
     return {
       ...commonProduct,
 
-      productType: "pants",
+      productType:
+        "pants",
 
       sizeGuide:
         row.size_guide as PantsSizeGuide,
@@ -216,7 +243,8 @@ function convertProduct(
   return {
     ...commonProduct,
 
-    productType: "tshirt",
+    productType:
+      "tshirt",
 
     sizeGuide:
       row.size_guide as TshirtSizeGuide,
@@ -240,6 +268,7 @@ export async function fetchProductsFromSupabase(): Promise<
       name,
       short_name,
       product_type,
+      category,
       price,
       image,
       images,
@@ -258,7 +287,10 @@ export async function fetchProductsFromSupabase(): Promise<
         )
       )
     `)
-    .eq("is_active", true)
+    .eq(
+      "is_active",
+      true
+    )
     .order(
       "created_at",
       {
@@ -278,7 +310,10 @@ export async function fetchProductsFromSupabase(): Promise<
   }
 
   return (
-    (data as DatabaseProductRow[] | null) ||
-    []
+    (
+      data as
+        | DatabaseProductRow[]
+        | null
+    ) || []
   ).map(convertProduct);
 }
