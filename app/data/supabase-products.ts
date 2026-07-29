@@ -38,6 +38,8 @@ type DatabaseProductRow = {
   category: string;
 
   price: number;
+  sale_price: number | null;
+
   image: string;
   images: unknown;
   description: string;
@@ -175,6 +177,18 @@ function convertProduct(
     firstVariant?.images[0] ||
     "/images/product-image.jpg";
 
+  const regularPrice =
+    Number(row.price) || 0;
+
+  const rawSalePrice =
+    Number(row.sale_price) || 0;
+
+  const validSalePrice =
+    rawSalePrice > 0 &&
+    rawSalePrice < regularPrice
+      ? rawSalePrice
+      : null;
+
   const commonProduct = {
     id:
       row.id,
@@ -199,7 +213,10 @@ function convertProduct(
       ),
 
     price:
-      Number(row.price) || 0,
+      regularPrice,
+
+    salePrice:
+      validSalePrice,
 
     image:
       mainImage,
@@ -270,6 +287,7 @@ export async function fetchProductsFromSupabase(): Promise<
       product_type,
       category,
       price,
+      sale_price,
       image,
       images,
       description,

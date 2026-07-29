@@ -20,9 +20,12 @@ import {
   fetchProductsFromSupabase,
 } from "@/app/data/supabase-products";
 
-import type {
-  Product,
-  ProductSize,
+import {
+  getProductDiscountPercentage,
+  getProductSellingPrice,
+  hasProductDiscount,
+  type Product,
+  type ProductSize,
 } from "@/app/data/products";
 
 const productSizes: ProductSize[] = [
@@ -211,10 +214,27 @@ export default function DynamicProductPage() {
     selectedStock > 0 &&
     selectedStock <= 3;
 
-  const total =
+  const isOnSale =
     product
-      ? product.price * quantity
+      ? hasProductDiscount(product)
+      : false;
+
+  const sellingPrice =
+    product
+      ? getProductSellingPrice(
+          product
+        )
       : 0;
+
+  const discountPercentage =
+    product
+      ? getProductDiscountPercentage(
+          product
+        )
+      : 0;
+
+  const total =
+    sellingPrice * quantity;
 
   function getFirstAvailableSize(
     variantIndex: number
@@ -372,7 +392,7 @@ export default function DynamicProductPage() {
         currentVariant.slug,
 
       size: selectedSize,
-      price: product.price,
+      price: sellingPrice,
       quantity,
       maxStock: selectedStock,
     };
@@ -503,7 +523,7 @@ export default function DynamicProductPage() {
           currentVariant.slug,
 
         size: selectedSize,
-        price: product.price,
+        price: sellingPrice,
         quantity,
         maxStock:
           selectedStock,
@@ -662,12 +682,20 @@ export default function DynamicProductPage() {
               className="aspect-square w-full object-cover"
             />
 
-            {totalVariantStock <=
-              0 && (
-              <span className="absolute left-3 top-3 bg-red-600 px-4 py-2 text-xs font-black text-white">
-                SOLD OUT
-              </span>
-            )}
+            <div className="absolute left-3 top-3 flex flex-col items-start gap-2">
+              {isOnSale && (
+                <span className="bg-red-600 px-4 py-2 text-xs font-black text-white">
+                  SALE {discountPercentage}% OFF
+                </span>
+              )}
+
+              {totalVariantStock <=
+                0 && (
+                <span className="bg-black px-4 py-2 text-xs font-black text-white">
+                  SOLD OUT
+                </span>
+              )}
+            </div>
 
             {galleryImages.length >
               1 && (
@@ -763,10 +791,30 @@ export default function DynamicProductPage() {
             {product.name}
           </h1>
 
-          <p className="mt-4 text-2xl font-bold">
-            Rs.{" "}
-            {product.price.toLocaleString()}
-          </p>
+          {isOnSale ? (
+            <div className="mt-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="bg-red-600 px-3 py-2 text-xs font-black text-white">
+                  SALE {discountPercentage}% OFF
+                </span>
+
+                <span className="text-lg font-bold text-gray-400 line-through">
+                  Rs.{" "}
+                  {product.price.toLocaleString()}
+                </span>
+              </div>
+
+              <p className="mt-3 text-3xl font-black text-red-600">
+                Rs.{" "}
+                {sellingPrice.toLocaleString()}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-4 text-2xl font-bold">
+              Rs.{" "}
+              {product.price.toLocaleString()}
+            </p>
+          )}
 
           {product.description && (
             <p className="mt-6 leading-7 text-gray-600">

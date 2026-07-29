@@ -6,8 +6,11 @@ import {
   useState,
 } from "react";
 
-import type {
-  Product,
+import {
+  getProductDiscountPercentage,
+  getProductSellingPrice,
+  hasProductDiscount,
+  type Product,
 } from "@/app/data/products";
 
 import {
@@ -287,8 +290,11 @@ export default function Home() {
               product.category,
               product.slug,
               String(product.price),
+              String(product.salePrice || ""),
               `Rs. ${product.price}`,
               `Rs.${product.price}`,
+              `Rs. ${product.salePrice || ""}`,
+              `Rs.${product.salePrice || ""}`,
               ...product.variants.flatMap(
                 (variant) => [
                   variant.name,
@@ -350,8 +356,12 @@ export default function Home() {
             "price-low"
           ) {
             return (
-              firstProduct.price -
-              secondProduct.price
+              getProductSellingPrice(
+                firstProduct
+              ) -
+              getProductSellingPrice(
+                secondProduct
+              )
             );
           }
 
@@ -360,8 +370,12 @@ export default function Home() {
             "price-high"
           ) {
             return (
-              secondProduct.price -
-              firstProduct.price
+              getProductSellingPrice(
+                secondProduct
+              ) -
+              getProductSellingPrice(
+                firstProduct
+              )
             );
           }
 
@@ -886,6 +900,21 @@ export default function Home() {
                           totalStock <=
                             5;
 
+                        const isOnSale =
+                          hasProductDiscount(
+                            product
+                          );
+
+                        const sellingPrice =
+                          getProductSellingPrice(
+                            product
+                          );
+
+                        const discountPercentage =
+                          getProductDiscountPercentage(
+                            product
+                          );
+
                         return (
                           <article
                             key={
@@ -911,6 +940,12 @@ export default function Home() {
                                 <span className="bg-black px-3 py-2 text-[10px] font-black tracking-[0.15em] text-white">
                                   {product.category}
                                 </span>
+
+                                {isOnSale && (
+                                  <span className="bg-red-600 px-3 py-2 text-[10px] font-black tracking-[0.15em] text-white">
+                                    SALE {discountPercentage}% OFF
+                                  </span>
+                                )}
 
                                 {isSoldOut && (
                                   <span className="bg-red-600 px-3 py-2 text-[10px] font-black tracking-[0.15em] text-white">
@@ -951,10 +986,26 @@ export default function Home() {
                                   </h3>
                                 </a>
 
-                                <p className="whitespace-nowrap text-lg font-black">
-                                  Rs.{" "}
-                                  {product.price.toLocaleString()}
-                                </p>
+                                <div className="whitespace-nowrap text-right">
+                                  {isOnSale ? (
+                                    <>
+                                      <p className="text-sm font-bold text-gray-400 line-through">
+                                        Rs.{" "}
+                                        {product.price.toLocaleString()}
+                                      </p>
+
+                                      <p className="text-xl font-black text-red-600">
+                                        Rs.{" "}
+                                        {sellingPrice.toLocaleString()}
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <p className="text-lg font-black">
+                                      Rs.{" "}
+                                      {product.price.toLocaleString()}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
 
                               {product.description && (
