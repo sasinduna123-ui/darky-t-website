@@ -49,6 +49,7 @@ type DatabaseProductRow = {
   slug: string;
   name: string;
   short_name: string;
+  category: string;
   product_type: ProductType;
   price: number;
   image: string;
@@ -317,6 +318,11 @@ export default function AdminPage() {
   ] = useState("");
 
   const [
+    category,
+    setCategory,
+  ] = useState("Oversized T-Shirt");
+
+  const [
     price,
     setPrice,
   ] = useState("3490");
@@ -456,6 +462,7 @@ export default function AdminPage() {
 
     setName("");
     setShortName("");
+    setCategory("Oversized T-Shirt");
     setPrice("3490");
     setDescription("");
 
@@ -494,12 +501,14 @@ export default function AdminPage() {
     setProductType(type);
 
     if (type === "tshirt") {
+      setCategory("Oversized T-Shirt");
       setPrice("3490");
 
       setFeatures([
         ...tshirtFeatures,
       ]);
     } else {
+      setCategory("Pants");
       setPrice("4950");
 
       setFeatures([
@@ -689,6 +698,13 @@ export default function AdminPage() {
     setShortName(
       product.short_name ||
         product.name
+    );
+
+    setCategory(
+      product.category ||
+        (product.product_type === "pants"
+          ? "Pants"
+          : "T-Shirt")
     );
 
     setPrice(
@@ -1162,6 +1178,15 @@ export default function AdminPage() {
       return false;
     }
 
+    if (!category.trim()) {
+      showMessage(
+        "Product category එක ඇතුළත් කරන්න.",
+        "error"
+      );
+
+      return false;
+    }
+
     if (!slug) {
       showMessage(
         "Valid product slug එකක් හදන්න බැහැ.",
@@ -1280,6 +1305,9 @@ export default function AdminPage() {
       shortName:
         shortName.trim() ||
         name.trim(),
+
+      category:
+        category.trim(),
 
       productType,
 
@@ -1729,7 +1757,7 @@ export default function AdminPage() {
               <div className="mt-7 space-y-5">
                 <div>
                   <label className="mb-2 block text-sm font-bold">
-                    PRODUCT TYPE
+                    SIZE GUIDE TYPE
                   </label>
 
                   <select
@@ -1745,13 +1773,56 @@ export default function AdminPage() {
                     className="w-full border border-gray-300 bg-white px-4 py-3 outline-none focus:border-black"
                   >
                     <option value="tshirt">
-                      T-SHIRT
+                      TOP WEAR (T-SHIRT / SHIRT / HOODIE / JACKET)
                     </option>
 
                     <option value="pants">
-                      PANTS
+                      BOTTOM WEAR (PANTS / JEANS / SHORTS)
                     </option>
                   </select>
+
+                  <p className="mt-2 text-xs leading-5 text-gray-500">
+                    මේක size guide එක තෝරන්න විතරයි. ඇඳුම් category එක පහළින් ලියන්න.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold">
+                    PRODUCT CATEGORY
+                  </label>
+
+                  <input
+                    value={category}
+                    onChange={(event) =>
+                      setCategory(
+                        event.target.value
+                      )
+                    }
+                    list="product-category-options"
+                    placeholder="Example: Hoodie"
+                    className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                  />
+
+                  <datalist id="product-category-options">
+                    <option value="Oversized T-Shirt" />
+                    <option value="T-Shirt" />
+                    <option value="Shirt" />
+                    <option value="Polo Shirt" />
+                    <option value="Hoodie" />
+                    <option value="Sweatshirt" />
+                    <option value="Jacket" />
+                    <option value="Pants" />
+                    <option value="Jeans" />
+                    <option value="Joggers" />
+                    <option value="Shorts" />
+                    <option value="Dress" />
+                    <option value="Skirt" />
+                    <option value="Kids Wear" />
+                  </datalist>
+
+                  <p className="mt-2 text-xs text-gray-500">
+                    List එකේ නැති category එකක් වුණත් type කරන්න පුළුවන්.
+                  </p>
                 </div>
 
                 <div>
@@ -2279,10 +2350,11 @@ export default function AdminPage() {
                 </div>
 
                 <span className="bg-black px-3 py-2 text-xs font-black text-white">
-                  {productType ===
-                  "tshirt"
-                    ? "T-SHIRT"
-                    : "PANTS"}
+                  {category.trim() ||
+                    (productType ===
+                    "tshirt"
+                      ? "T-SHIRT"
+                      : "PANTS")}
                 </span>
               </div>
 
