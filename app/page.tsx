@@ -280,35 +280,34 @@ export default function Home() {
                 product
               );
 
+            const searchableText = [
+              product.name,
+              product.shortName,
+              product.description,
+              product.category,
+              product.slug,
+              String(product.price),
+              `Rs. ${product.price}`,
+              `Rs.${product.price}`,
+              ...product.variants.flatMap(
+                (variant) => [
+                  variant.name,
+                  variant.slug,
+                  variant.hex,
+                  ...Object.keys(
+                    variant.stock
+                  ),
+                ]
+              ),
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
+
             const matchesSearch =
               !cleanSearch ||
-              product.name
-                .toLowerCase()
-                .includes(
-                  cleanSearch
-                ) ||
-              product.shortName
-                .toLowerCase()
-                .includes(
-                  cleanSearch
-                ) ||
-              product.description
-                .toLowerCase()
-                .includes(
-                  cleanSearch
-                ) ||
-              product.category
-                .toLowerCase()
-                .includes(
-                  cleanSearch
-                ) ||
-              product.variants.some(
-                (variant) =>
-                  variant.name
-                    .toLowerCase()
-                    .includes(
-                      cleanSearch
-                    )
+              searchableText.includes(
+                cleanSearch
               );
 
             const matchesType =
@@ -690,7 +689,7 @@ export default function Home() {
                                 .value
                             )
                           }
-                          placeholder="Search product or colour..."
+                          placeholder="Search name, category, colour, size or price..."
                           className="w-full border border-gray-300 bg-white px-4 py-4 pr-12 outline-none transition focus:border-black"
                         />
 
