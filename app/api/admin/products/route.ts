@@ -35,6 +35,7 @@ type ProductInput = {
   slug: string;
   name: string;
   shortName: string;
+  category: string;
 
   productType:
     | "tshirt"
@@ -160,6 +161,10 @@ function validateProduct(
 
   if (!product.slug?.trim()) {
     return "Product slug එක අවශ්‍යයි.";
+  }
+
+  if (!product.category?.trim()) {
+    return "Product category එක අවශ්‍යයි.";
   }
 
   if (
@@ -377,6 +382,7 @@ export async function GET(
         name,
         short_name,
         product_type,
+        category,
         price,
         image,
         images,
@@ -511,6 +517,9 @@ export async function POST(
 
         product_type:
           product.productType,
+
+        category:
+          product.category.trim(),
 
         price:
           Math.floor(
@@ -712,6 +721,9 @@ export async function PUT(
 
         product_type:
           product.productType,
+
+        category:
+          product.category.trim(),
 
         price:
           Math.floor(
