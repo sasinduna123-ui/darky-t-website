@@ -33,9 +33,189 @@ type CreateOrderInput = {
   district: string;
   deliveryAddress: string;
   note: string;
+  promoCode?: string;
 
   items: OrderItemInput[];
 };
+
+
+type PromoCodeRow = {
+  id: string;
+  code: string;
+  discount_type:
+    | "percentage"
+    | "fixed";
+  discount_value: number;
+  minimum_order: number | null;
+  usage_limit: number | null;
+  used_count: number | null;
+  expires_at: string | null;
+  is_active: boolean;
+};
+
+type ValidatedPromo = {
+  id: string;
+  code: string;
+  discountAmount: number;
+};
+
+async function validatePromoCode(
+  promoCode: string,
+  subtotal: number
+): Promise<ValidatedPromo | null> {
+  const cleanCode =
+    cleanText(promoCode)
+      .toUpperCase();
+
+  if (!cleanCode) {
+    return null;
+  }
+
+  const supabase =
+    createAdminClient();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("promo_codes")
+    .select(`
+      id,
+      code,
+      discount_type,
+      discount_value,
+      minimum_order,
+      usage_limit,
+      used_count,
+      expires_at,
+      is_active
+    `)
+    .eq("code", cleanCode)
+    .maybeSingle<PromoCodeRow>();
+
+  if (error) {
+    throw new Error(
+      error.message
+    );
+  }
+
+  if (!data) {
+    throw new Error(
+      "Promo code එක වැරදියි."
+    );
+  }
+
+  if (!data.is_active) {
+    throw new Error(
+      "මේ promo code එක inactive."
+    );
+  }
+
+  if (
+    data.expires_at &&
+    new Date(
+      data.expires_at
+    ).getTime() <= Date.now()
+  ) {
+    throw new Error(
+      "මේ promo code එක expire වෙලා."
+    );
+  }
+
+  const usageLimit =
+    data.usage_limit === null
+      ? null
+      : Number(
+          data.usage_limit
+        );
+
+  const usedCount =
+    Number(
+      data.used_count || 0
+    );
+
+  if (
+    usageLimit !== null &&
+    usedCount >= usageLimit
+  ) {
+    throw new Error(
+      "මේ promo code එකේ usage limit එක අවසන්."
+    );
+  }
+
+  const minimumOrder =
+    Math.max(
+      0,
+      Number(
+        data.minimum_order || 0
+      )
+    );
+
+  if (
+    subtotal < minimumOrder
+  ) {
+    throw new Error(
+      `මේ promo code එකට අවම order amount එක Rs. ${minimumOrder.toLocaleString()}යි.`
+    );
+  }
+
+  const discountValue =
+    Number(
+      data.discount_value
+    );
+
+  if (
+    !Number.isFinite(
+      discountValue
+    ) ||
+    discountValue <= 0
+  ) {
+    throw new Error(
+      "Promo discount value එක invalid."
+    );
+  }
+
+  let discountAmount = 0;
+
+  if (
+    data.discount_type ===
+    "percentage"
+  ) {
+    discountAmount =
+      subtotal *
+      (
+        Math.min(
+          100,
+          discountValue
+        ) / 100
+      );
+  } else if (
+    data.discount_type ===
+    "fixed"
+  ) {
+    discountAmount =
+      discountValue;
+  } else {
+    throw new Error(
+      "Promo discount type එක invalid."
+    );
+  }
+
+  return {
+    id: data.id,
+    code: data.code,
+    discountAmount:
+      Math.min(
+        subtotal,
+        Math.max(
+          0,
+          Math.round(
+            discountAmount
+          )
+        )
+      ),
+  };
+}
 
 function cleanText(
   value: unknown
@@ -455,6 +635,23 @@ export async function POST(
         0
       );
 
+    const validatedPromo =
+      await validatePromoCode(
+        order.promoCode || "",
+        subtotal
+      );
+
+    const discountAmount =
+      validatedPromo
+        ?.discountAmount || 0;
+
+    const discountedSubtotal =
+      Math.max(
+        0,
+        subtotal -
+          discountAmount
+      );
+
     const deliveryFee =
       totalQuantity <= 5
         ? 350
@@ -462,9 +659,9 @@ export async function POST(
 
     const finalTotal =
       totalQuantity <= 5
-        ? subtotal +
+        ? discountedSubtotal +
           deliveryFee
-        : subtotal;
+        : discountedSubtotal;
 
     const {
       data:
@@ -516,6 +713,16 @@ export async function POST(
           totalQuantity,
 
         subtotal,
+
+        promo_code:
+          validatedPromo?.code ||
+          null,
+
+        discount_amount:
+          discountAmount,
+
+        discounted_subtotal:
+          discountedSubtotal,
 
         delivery_fee:
           deliveryFee,
@@ -593,6 +800,74 @@ export async function POST(
       );
     }
 
+    if (validatedPromo) {
+      const {
+        data: currentPromo,
+        error:
+          currentPromoError,
+      } = await supabase
+        .from("promo_codes")
+        .select(`
+          used_count,
+          usage_limit
+        `)
+        .eq(
+          "id",
+          validatedPromo.id
+        )
+        .single();
+
+      if (currentPromoError) {
+        throw new Error(
+          currentPromoError.message
+        );
+      }
+
+      const currentUsedCount =
+        Number(
+          currentPromo.used_count ||
+            0
+        );
+
+      const currentUsageLimit =
+        currentPromo.usage_limit ===
+        null
+          ? null
+          : Number(
+              currentPromo.usage_limit
+            );
+
+      if (
+        currentUsageLimit !== null &&
+        currentUsedCount >=
+          currentUsageLimit
+      ) {
+        throw new Error(
+          "මේ promo code එකේ usage limit එක අවසන්."
+        );
+      }
+
+      const {
+        error:
+          promoUpdateError,
+      } = await supabase
+        .from("promo_codes")
+        .update({
+          used_count:
+            currentUsedCount + 1,
+        })
+        .eq(
+          "id",
+          validatedPromo.id
+        );
+
+      if (promoUpdateError) {
+        throw new Error(
+          promoUpdateError.message
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
 
@@ -604,6 +879,10 @@ export async function POST(
 
       totalQuantity,
       subtotal,
+      promoCode:
+        validatedPromo?.code || null,
+      discountAmount,
+      discountedSubtotal,
       deliveryFee,
       finalTotal,
 
