@@ -16,6 +16,10 @@ type OrderStatus =
   | "delivered"
   | "cancelled";
 
+type OrdersSection =
+  | "overview"
+  | "orders";
+
 type OrderItem = {
   id: string;
   order_id: string;
@@ -755,6 +759,13 @@ export default function AdminOrdersPage() {
   >("all");
 
   const [
+    activeSection,
+    setActiveSection,
+  ] = useState<OrdersSection>(
+    "overview"
+  );
+
+  const [
     expandedOrderId,
     setExpandedOrderId,
   ] = useState<
@@ -1466,21 +1477,34 @@ export default function AdminOrdersPage() {
         <div className="mt-3 flex flex-wrap items-end justify-between gap-5">
           <div>
             <h1 className="text-4xl font-black md:text-5xl">
-              ORDER MANAGER
+              ORDER DASHBOARD
             </h1>
 
             <p className="mt-4 text-gray-600">
-              Cart සහ direct orders manage කරන්න.
+              Orders, revenue, status සහ customer details එක තැනකින් manage කරන්න.
             </p>
           </div>
 
-          <p className="font-bold text-gray-600">
-            Showing{" "}
-            {
-              filteredOrders.length
-            }{" "}
-            of {orders.length}
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="font-bold text-gray-600">
+              Showing{" "}
+              {filteredOrders.length}{" "}
+              of {orders.length}
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                loadOrders()
+              }
+              disabled={isLoading}
+              className="bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800 disabled:bg-gray-400"
+            >
+              {isLoading
+                ? "REFRESHING..."
+                : "REFRESH DATA"}
+            </button>
+          </div>
         </div>
 
         {message && (
@@ -1495,6 +1519,47 @@ export default function AdminOrdersPage() {
           </div>
         )}
 
+        <div className="sticky top-0 z-30 mt-8 border border-gray-200 bg-white p-2 shadow-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setActiveSection(
+                  "overview"
+                )
+              }
+              className={`px-4 py-3 text-sm font-black transition ${
+                activeSection ===
+                "overview"
+                  ? "bg-black text-white"
+                  : "bg-gray-100 text-black hover:bg-gray-200"
+              }`}
+            >
+              OVERVIEW
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setActiveSection(
+                  "orders"
+                )
+              }
+              className={`px-4 py-3 text-sm font-black transition ${
+                activeSection ===
+                "orders"
+                  ? "bg-black text-white"
+                  : "bg-gray-100 text-black hover:bg-gray-200"
+              }`}
+            >
+              ALL ORDERS
+            </button>
+          </div>
+        </div>
+
+        {activeSection ===
+          "overview" && (
+          <>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <div className="bg-white p-6 shadow-sm">
             <p className="text-sm font-bold text-gray-500">
@@ -1692,9 +1757,17 @@ export default function AdminOrdersPage() {
               </h2>
             </div>
 
-            <p className="text-sm font-bold text-gray-500">
-              Latest 5 orders
-            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setActiveSection(
+                  "orders"
+                )
+              }
+              className="text-sm font-black underline underline-offset-4"
+            >
+              VIEW ALL ORDERS
+            </button>
           </div>
 
           {dashboard.recentOrders.length ===
@@ -1772,7 +1845,37 @@ export default function AdminOrdersPage() {
           )}
         </div>
 
-        <div className="mt-8 grid gap-5 bg-white p-6 shadow-sm md:grid-cols-3">
+          </>
+        )}
+
+        {activeSection ===
+          "orders" && (
+          <>
+        <div className="mt-8 bg-white p-6 shadow-sm md:p-8">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-[0.25em] text-gray-500">
+                FIND ORDERS
+              </p>
+              <h2 className="mt-2 text-2xl font-black">
+                SEARCH & FILTER
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSearchText("");
+                setStatusFilter("all");
+                setOrderTypeFilter("all");
+              }}
+              className="border border-black px-4 py-2 text-sm font-black hover:bg-black hover:text-white"
+            >
+              CLEAR FILTERS
+            </button>
+          </div>
+
+          <div className="mt-6 grid gap-5 md:grid-cols-3">
           <div>
             <label className="mb-2 block text-sm font-black">
               SEARCH
@@ -1860,6 +1963,7 @@ export default function AdminOrdersPage() {
               </option>
             </select>
           </div>
+        </div>
         </div>
 
         {isLoading ? (
@@ -2289,6 +2393,8 @@ export default function AdminOrdersPage() {
               }
             )}
           </div>
+        )}
+          </>
         )}
       </section>
     </main>
