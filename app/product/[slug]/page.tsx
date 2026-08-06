@@ -9,10 +9,6 @@ import {
   useParams,
 } from "next/navigation";
 
-import {
-  FaWhatsapp,
-} from "react-icons/fa";
-
 import CartCount from "@/app/components/CartCount";
 import SizeGuide from "@/app/components/SizeGuide";
 
@@ -493,59 +489,6 @@ export default function DynamicProductPage() {
     } catch {
       setCartMessage(
         "Product එක cart එකට add කරන්න බැරි වුණා."
-      );
-    }
-  }
-
-  function directOrder() {
-    if (
-      !product ||
-      !currentVariant ||
-      isOutOfStock
-    ) {
-      return;
-    }
-
-    const orderImage =
-      currentVariant.images[0] ||
-      product.image;
-
-    const directOrderItem: CartItem =
-      {
-        id: product.id,
-        name: product.name,
-        image: orderImage,
-
-        color:
-          currentVariant.name,
-
-        colorSlug:
-          currentVariant.slug,
-
-        size: selectedSize,
-        price: sellingPrice,
-        quantity,
-        maxStock:
-          selectedStock,
-      };
-
-    try {
-      localStorage.setItem(
-        "darky-direct-order",
-        JSON.stringify(
-          directOrderItem
-        )
-      );
-
-      localStorage.removeItem(
-        "darky-direct-order-id"
-      );
-
-      window.location.href =
-        "/direct-order";
-    } catch {
-      setCartMessage(
-        "Delivery details page එකට යන්න බැරි වුණා."
       );
     }
   }
@@ -1098,30 +1041,12 @@ export default function DynamicProductPage() {
                 : "ADD TO CART"}
             </button>
 
-            <button
-              type="button"
-              onClick={
-                directOrder
-              }
-              disabled={
-                isOutOfStock
-              }
-              className={`mt-4 flex w-full items-center justify-center gap-3 px-8 py-4 text-center font-bold text-white transition ${
-                isOutOfStock
-                  ? "cursor-not-allowed bg-gray-400"
-                  : "bg-green-600 hover:bg-green-700"
-              }`}
+            <a
+              href="/cart"
+              className="mt-4 block w-full border-2 border-black px-8 py-4 text-center font-bold text-black transition hover:bg-black hover:text-white"
             >
-              {!isOutOfStock && (
-                <FaWhatsapp className="text-2xl" />
-              )}
-
-              <span>
-                {isOutOfStock
-                  ? "OUT OF STOCK"
-                  : "ORDER WITH DELIVERY DETAILS"}
-              </span>
-            </button>
+              VIEW CART
+            </a>
           </div>
 
           {/* Features */}
@@ -1161,26 +1086,12 @@ export default function DynamicProductPage() {
             : "ADD TO CART"}
         </button>
 
-        <button
-          type="button"
-          onClick={directOrder}
-          disabled={
-            isOutOfStock
-          }
-          className={`flex items-center justify-center gap-2 px-4 py-4 text-sm font-black text-white ${
-            isOutOfStock
-              ? "cursor-not-allowed bg-gray-400"
-              : "bg-green-600"
-          }`}
+        <a
+          href="/cart"
+          className="flex items-center justify-center border-2 border-black px-4 py-4 text-sm font-black text-black"
         >
-          {!isOutOfStock && (
-            <FaWhatsapp className="text-xl" />
-          )}
-
-          {isOutOfStock
-            ? "SOLD OUT"
-            : "ORDER NOW"}
-        </button>
+          VIEW CART
+        </a>
       </div>
     </main>
   );
