@@ -1052,7 +1052,7 @@ Thank you,
       saveCart([]);
 
       setSuccessMessage(
-        `${savedOrderNumber} order එක database එකට save කළා. WhatsApp open කරනවා...`
+        `${savedOrderNumber} Order එක සාර්ථකව save කළා. WhatsApp එක open කරමින් පවතී...`
       );
 
       if (whatsappWindow) {
@@ -1688,13 +1688,21 @@ Thank you,
                   <FaWhatsapp className="text-2xl" />
 
                   {isSubmitting
-                    ? "SAVING ORDER..."
+                    ? "WHATSAPP OPEN කරනවා..."
                     : "PLACE ORDER & OPEN WHATSAPP"}
                 </button>
 
-                                <p className="text-center text-xs leading-5 text-gray-500">
-                  මුලින් order එක database එකට save වෙනවා. ඊට පස්සේ WhatsApp message එක open වෙනවා.
-                </p>
+                <div
+                  className={`border px-4 py-3 text-center text-sm font-black leading-6 ${
+                    isSubmitting
+                      ? "animate-pulse border-yellow-300 bg-yellow-100 text-yellow-900"
+                      : "border-green-200 bg-green-50 text-green-800"
+                  }`}
+                >
+                  {isSubmitting
+                    ? "කරුණාකර තත්පර කිහිපයක් රැඳී සිටින්න. ඔබගේ Order එක save කර WhatsApp එක open කරමින් පවතී..."
+                    : "Order button එක click කළ පසු WhatsApp එක open වීමට තත්පර කිහිපයක් ගත විය හැක. කරුණාකර රැඳී සිටින්න."}
+                </div>
 
                 <div className="border-t border-gray-200 pt-5">
                   <p className="mb-4 text-xs font-black tracking-[0.18em] text-gray-500">
