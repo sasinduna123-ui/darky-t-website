@@ -64,6 +64,27 @@ type DatabaseProductRow = {
     | null;
 };
 
+type DiscountType =
+  | "percentage"
+  | "fixed";
+
+type PromoCodeRow = {
+  id: string;
+  code: string;
+  discount_type: DiscountType;
+  discount_value: number;
+  minimum_order: number | null;
+  usage_limit: number | null;
+  used_count: number | null;
+  expires_at: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+type PromoMode =
+  | "create"
+  | "edit";
+
 const tshirtFeatures = [
   "240 GSM heavy cotton",
   "Premium oversized fit",
@@ -283,6 +304,73 @@ export default function AdminPage() {
   >("success");
 
   const [
+    promos,
+    setPromos,
+  ] = useState<PromoCodeRow[]>([]);
+
+  const [
+    promosLoading,
+    setPromosLoading,
+  ] = useState(false);
+
+  const [
+    promoSaving,
+    setPromoSaving,
+  ] = useState(false);
+
+  const [
+    promoDeleting,
+    setPromoDeleting,
+  ] = useState(false);
+
+  const [
+    promoMode,
+    setPromoMode,
+  ] = useState<PromoMode>("create");
+
+  const [
+    selectedPromoId,
+    setSelectedPromoId,
+  ] = useState("");
+
+  const [
+    promoCode,
+    setPromoCode,
+  ] = useState("");
+
+  const [
+    promoDiscountType,
+    setPromoDiscountType,
+  ] = useState<DiscountType>(
+    "percentage"
+  );
+
+  const [
+    promoDiscountValue,
+    setPromoDiscountValue,
+  ] = useState("10");
+
+  const [
+    promoMinimumOrder,
+    setPromoMinimumOrder,
+  ] = useState("0");
+
+  const [
+    promoUsageLimit,
+    setPromoUsageLimit,
+  ] = useState("");
+
+  const [
+    promoExpiresAt,
+    setPromoExpiresAt,
+  ] = useState("");
+
+  const [
+    promoIsActive,
+    setPromoIsActive,
+  ] = useState(true);
+
+  const [
     adminMode,
     setAdminMode,
   ] =
@@ -457,6 +545,397 @@ export default function AdminPage() {
     }, 5000);
   }
 
+  function resetPromoForm() {
+    setPromoMode("create");
+    setSelectedPromoId("");
+    setPromoCode("");
+    setPromoDiscountType(
+      "percentage"
+    );
+    setPromoDiscountValue("10");
+    setPromoMinimumOrder("0");
+    setPromoUsageLimit("");
+    setPromoExpiresAt("");
+    setPromoIsActive(true);
+  }
+
+  function formatDateTimeLocal(
+    value: string | null
+  ) {
+    if (!value) {
+      return "";
+    }
+
+    const date = new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "";
+    }
+
+    const localDate =
+      new Date(
+        date.getTime() -
+          date.getTimezoneOffset() *
+            60000
+      );
+
+    return localDate
+      .toISOString()
+      .slice(0, 16);
+  }
+
+  async function loadPromos(
+    password = adminPassword
+  ) {
+    setPromosLoading(true);
+
+    try {
+      const response =
+        await fetch(
+          "/api/admin/promos",
+          {
+            method: "GET",
+            headers: {
+              "x-darky-admin-password":
+                password,
+            },
+            cache: "no-store",
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "Promo codes load කරන්න බැරි වුණා."
+        );
+      }
+
+      setPromos(
+        result.promos || []
+      );
+
+      return true;
+    } catch (error) {
+      showMessage(
+        error instanceof Error
+          ? error.message
+          : "Promo codes load කරන්න බැරි වුණා.",
+        "error"
+      );
+
+      return false;
+    } finally {
+      setPromosLoading(false);
+    }
+  }
+
+  function loadExistingPromo(
+    promoId: string
+  ) {
+    setSelectedPromoId(
+      promoId
+    );
+
+    if (!promoId) {
+      resetPromoForm();
+      setPromoMode("edit");
+      return;
+    }
+
+    const promo =
+      promos.find(
+        (currentPromo) =>
+          currentPromo.id ===
+          promoId
+      );
+
+    if (!promo) {
+      showMessage(
+        "Promo code එක හොයාගන්න බැහැ.",
+        "error"
+      );
+      return;
+    }
+
+    setPromoMode("edit");
+    setPromoCode(promo.code);
+    setPromoDiscountType(
+      promo.discount_type
+    );
+    setPromoDiscountValue(
+      String(
+        promo.discount_value
+      )
+    );
+    setPromoMinimumOrder(
+      String(
+        promo.minimum_order || 0
+      )
+    );
+    setPromoUsageLimit(
+      promo.usage_limit === null
+        ? ""
+        : String(
+            promo.usage_limit
+          )
+    );
+    setPromoExpiresAt(
+      formatDateTimeLocal(
+        promo.expires_at
+      )
+    );
+    setPromoIsActive(
+      promo.is_active
+    );
+  }
+
+  function validatePromoForm() {
+    const cleanCode =
+      promoCode
+        .trim()
+        .toUpperCase();
+
+    if (!cleanCode) {
+      showMessage(
+        "Promo code එක ඇතුළත් කරන්න.",
+        "error"
+      );
+      return false;
+    }
+
+    const discountValue =
+      Number(
+        promoDiscountValue
+      );
+
+    if (
+      !Number.isFinite(
+        discountValue
+      ) ||
+      discountValue <= 0
+    ) {
+      showMessage(
+        "Discount value එක invalid.",
+        "error"
+      );
+      return false;
+    }
+
+    if (
+      promoDiscountType ===
+        "percentage" &&
+      discountValue > 100
+    ) {
+      showMessage(
+        "Percentage discount එක 100ට වඩා වැඩි වෙන්න බැහැ.",
+        "error"
+      );
+      return false;
+    }
+
+    if (
+      Number(
+        promoMinimumOrder
+      ) < 0
+    ) {
+      showMessage(
+        "Minimum order එක 0 හෝ ඊට වැඩි වෙන්න ඕන.",
+        "error"
+      );
+      return false;
+    }
+
+    if (
+      promoUsageLimit.trim() &&
+      Number(
+        promoUsageLimit
+      ) < 1
+    ) {
+      showMessage(
+        "Usage limit එක 1 හෝ ඊට වැඩි වෙන්න ඕන.",
+        "error"
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  async function savePromo() {
+    if (!validatePromoForm()) {
+      return;
+    }
+
+    if (
+      promoMode === "edit" &&
+      !selectedPromoId
+    ) {
+      showMessage(
+        "Edit කරන්න promo code එකක් select කරන්න.",
+        "error"
+      );
+      return;
+    }
+
+    setPromoSaving(true);
+
+    try {
+      const response =
+        await fetch(
+          "/api/admin/promos",
+          {
+            method:
+              promoMode === "edit"
+                ? "PUT"
+                : "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              "x-darky-admin-password":
+                adminPassword,
+            },
+            body: JSON.stringify({
+              promo: {
+                id:
+                  selectedPromoId ||
+                  undefined,
+                code:
+                  promoCode
+                    .trim()
+                    .toUpperCase(),
+                discountType:
+                  promoDiscountType,
+                discountValue:
+                  Number(
+                    promoDiscountValue
+                  ),
+                minimumOrder:
+                  Number(
+                    promoMinimumOrder ||
+                      0
+                  ),
+                usageLimit:
+                  promoUsageLimit.trim()
+                    ? Number(
+                        promoUsageLimit
+                      )
+                    : null,
+                expiresAt:
+                  promoExpiresAt
+                    ? new Date(
+                        promoExpiresAt
+                      ).toISOString()
+                    : null,
+                isActive:
+                  promoIsActive,
+              },
+            }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "Promo code save කරන්න බැරි වුණා."
+        );
+      }
+
+      showMessage(
+        result.message ||
+          "Promo code save කළා."
+      );
+
+      await loadPromos();
+      resetPromoForm();
+    } catch (error) {
+      showMessage(
+        error instanceof Error
+          ? error.message
+          : "Promo code save කරන්න බැරි වුණා.",
+        "error"
+      );
+    } finally {
+      setPromoSaving(false);
+    }
+  }
+
+  async function deletePromo() {
+    if (!selectedPromoId) {
+      showMessage(
+        "Delete කරන්න promo code එකක් select කරන්න.",
+        "error"
+      );
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `${promoCode} promo code එක delete කරන්නද?`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPromoDeleting(true);
+
+    try {
+      const response =
+        await fetch(
+          "/api/admin/promos",
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type":
+                "application/json",
+              "x-darky-admin-password":
+                adminPassword,
+            },
+            body: JSON.stringify({
+              id: selectedPromoId,
+            }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            "Promo code delete කරන්න බැරි වුණා."
+        );
+      }
+
+      showMessage(
+        result.message ||
+          "Promo code delete කළා."
+      );
+
+      await loadPromos();
+      resetPromoForm();
+    } catch (error) {
+      showMessage(
+        error instanceof Error
+          ? error.message
+          : "Promo code delete කරන්න බැරි වුණා.",
+        "error"
+      );
+    } finally {
+      setPromoDeleting(false);
+    }
+  }
+
   function resetForm() {
     setAdminMode("create");
     setSelectedExistingSlug("");
@@ -607,6 +1086,10 @@ export default function AdminPage() {
 
     setIsLoggedIn(true);
 
+    await loadPromos(
+      adminPassword
+    );
+
     sessionStorage.setItem(
       "darky-admin-password",
       adminPassword
@@ -625,6 +1108,8 @@ export default function AdminPage() {
     setAdminPassword("");
     setIsLoggedIn(false);
     setProducts([]);
+    setPromos([]);
+    resetPromoForm();
     resetForm();
   }
 
@@ -653,6 +1138,9 @@ export default function AdminPage() {
 
       if (success) {
         setIsLoggedIn(true);
+        await loadPromos(
+          savedPassword ?? ""
+        );
       } else {
         sessionStorage.removeItem(
           "darky-admin-password"
@@ -1706,6 +2194,377 @@ export default function AdminPage() {
             {message}
           </div>
         )}
+
+        <div className="mt-8 bg-white p-6 shadow-sm md:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div>
+              <p className="text-sm font-semibold tracking-[0.3em] text-gray-500">
+                DISCOUNT SYSTEM
+              </p>
+
+              <h2 className="mt-2 text-3xl font-black">
+                PROMO CODE MANAGER
+              </h2>
+
+              <p className="mt-3 text-sm leading-6 text-gray-600">
+                Promo codes create, edit, activate, deactivate සහ delete කරන්න.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                loadPromos()
+              }
+              disabled={
+                promosLoading
+              }
+              className="bg-black px-5 py-3 text-sm font-black text-white disabled:bg-gray-400"
+            >
+              {promosLoading
+                ? "LOADING..."
+                : "REFRESH PROMOS"}
+            </button>
+          </div>
+
+          <div className="mt-7 grid gap-5 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-black">
+                PROMO MODE
+              </label>
+
+              <select
+                value={promoMode}
+                onChange={(event) => {
+                  const mode =
+                    event.target
+                      .value as PromoMode;
+
+                  resetPromoForm();
+                  setPromoMode(mode);
+                }}
+                className="w-full border border-gray-300 bg-white px-4 py-3 outline-none focus:border-black"
+              >
+                <option value="create">
+                  CREATE NEW PROMO
+                </option>
+
+                <option value="edit">
+                  EDIT EXISTING PROMO
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-black">
+                EXISTING PROMO
+              </label>
+
+              <select
+                value={
+                  selectedPromoId
+                }
+                disabled={
+                  promoMode !== "edit"
+                }
+                onChange={(event) =>
+                  loadExistingPromo(
+                    event.target.value
+                  )
+                }
+                className="w-full border border-gray-300 bg-white px-4 py-3 outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
+              >
+                <option value="">
+                  SELECT PROMO CODE
+                </option>
+
+                {promos.map(
+                  (promo) => (
+                    <option
+                      key={promo.id}
+                      value={promo.id}
+                    >
+                      {promo.code} —{" "}
+                      {promo.discount_type ===
+                      "percentage"
+                        ? `${promo.discount_value}% OFF`
+                        : `Rs. ${Number(
+                            promo.discount_value
+                          ).toLocaleString()} OFF`}
+                      {" "}— Used{" "}
+                      {promo.used_count || 0}
+                      {promo.usage_limit !==
+                      null
+                        ? `/${promo.usage_limit}`
+                        : ""}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label className="mb-2 block text-sm font-bold">
+                PROMO CODE
+              </label>
+
+              <input
+                value={promoCode}
+                onChange={(event) =>
+                  setPromoCode(
+                    event.target.value.toUpperCase()
+                  )
+                }
+                placeholder="DARKY10"
+                className="w-full border border-gray-300 px-4 py-3 font-black uppercase outline-none focus:border-black"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold">
+                DISCOUNT TYPE
+              </label>
+
+              <select
+                value={
+                  promoDiscountType
+                }
+                onChange={(event) =>
+                  setPromoDiscountType(
+                    event.target
+                      .value as DiscountType
+                  )
+                }
+                className="w-full border border-gray-300 bg-white px-4 py-3 outline-none focus:border-black"
+              >
+                <option value="percentage">
+                  PERCENTAGE
+                </option>
+
+                <option value="fixed">
+                  FIXED AMOUNT
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold">
+                DISCOUNT VALUE
+              </label>
+
+              <input
+                type="number"
+                min="1"
+                max={
+                  promoDiscountType ===
+                  "percentage"
+                    ? 100
+                    : undefined
+                }
+                value={
+                  promoDiscountValue
+                }
+                onChange={(event) =>
+                  setPromoDiscountValue(
+                    event.target.value
+                  )
+                }
+                className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold">
+                MINIMUM ORDER
+              </label>
+
+              <input
+                type="number"
+                min="0"
+                value={
+                  promoMinimumOrder
+                }
+                onChange={(event) =>
+                  setPromoMinimumOrder(
+                    event.target.value
+                  )
+                }
+                className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold">
+                USAGE LIMIT
+              </label>
+
+              <input
+                type="number"
+                min="1"
+                value={
+                  promoUsageLimit
+                }
+                onChange={(event) =>
+                  setPromoUsageLimit(
+                    event.target.value
+                  )
+                }
+                placeholder="Empty = unlimited"
+                className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold">
+                EXPIRY DATE
+              </label>
+
+              <input
+                type="datetime-local"
+                value={
+                  promoExpiresAt
+                }
+                onChange={(event) =>
+                  setPromoExpiresAt(
+                    event.target.value
+                  )
+                }
+                className="w-full border border-gray-300 px-4 py-3 outline-none focus:border-black"
+              />
+            </div>
+          </div>
+
+          <label className="mt-6 flex w-fit cursor-pointer items-center gap-3 font-black">
+            <input
+              type="checkbox"
+              checked={
+                promoIsActive
+              }
+              onChange={(event) =>
+                setPromoIsActive(
+                  event.target.checked
+                )
+              }
+              className="h-5 w-5"
+            />
+            PROMO ACTIVE
+          </label>
+
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={savePromo}
+              disabled={
+                promoSaving
+              }
+              className="flex-1 bg-black px-6 py-4 font-black text-white disabled:bg-gray-400"
+            >
+              {promoSaving
+                ? "SAVING..."
+                : promoMode === "edit"
+                  ? "UPDATE PROMO"
+                  : "SAVE PROMO"}
+            </button>
+
+            <button
+              type="button"
+              onClick={
+                resetPromoForm
+              }
+              className="border border-black px-6 py-4 font-black hover:bg-black hover:text-white"
+            >
+              RESET
+            </button>
+
+            {promoMode ===
+              "edit" && (
+              <button
+                type="button"
+                onClick={
+                  deletePromo
+                }
+                disabled={
+                  promoDeleting ||
+                  !selectedPromoId
+                }
+                className="bg-red-600 px-6 py-4 font-black text-white disabled:bg-gray-300 disabled:text-gray-500"
+              >
+                {promoDeleting
+                  ? "DELETING..."
+                  : "DELETE PROMO"}
+              </button>
+            )}
+          </div>
+
+          {promos.length > 0 && (
+            <div className="mt-8 overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border px-4 py-3">
+                      CODE
+                    </th>
+                    <th className="border px-4 py-3">
+                      DISCOUNT
+                    </th>
+                    <th className="border px-4 py-3">
+                      USED
+                    </th>
+                    <th className="border px-4 py-3">
+                      STATUS
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {promos.map(
+                    (promo) => (
+                      <tr key={promo.id}>
+                        <td className="border px-4 py-3 font-black">
+                          {promo.code}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          {promo.discount_type ===
+                          "percentage"
+                            ? `${promo.discount_value}%`
+                            : `Rs. ${Number(
+                                promo.discount_value
+                              ).toLocaleString()}`}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          {promo.used_count ||
+                            0}
+                          {promo.usage_limit !==
+                          null
+                            ? ` / ${promo.usage_limit}`
+                            : " / Unlimited"}
+                        </td>
+
+                        <td className="border px-4 py-3">
+                          <span
+                            className={`px-3 py-1 text-xs font-black ${
+                              promo.is_active
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {promo.is_active
+                              ? "ACTIVE"
+                              : "INACTIVE"}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         <div className="mt-8 grid gap-5 bg-white p-6 shadow-sm md:grid-cols-2 md:p-8">
           <div>
