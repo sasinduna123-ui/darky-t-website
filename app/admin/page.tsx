@@ -85,6 +85,11 @@ type PromoMode =
   | "create"
   | "edit";
 
+type AdminSection =
+  | "dashboard"
+  | "products"
+  | "promos";
+
 const tshirtFeatures = [
   "240 GSM heavy cotton",
   "Premium oversized fit",
@@ -369,6 +374,13 @@ export default function AdminPage() {
     promoIsActive,
     setPromoIsActive,
   ] = useState(true);
+
+  const [
+    activeSection,
+    setActiveSection,
+  ] = useState<AdminSection>(
+    "dashboard"
+  );
 
   const [
     adminMode,
@@ -2158,28 +2170,40 @@ export default function AdminPage() {
         <div className="mt-3 flex flex-wrap items-end justify-between gap-5">
           <div>
             <h1 className="text-4xl font-black md:text-5xl">
-              PRODUCT MANAGER
+              ADMIN DASHBOARD
             </h1>
 
             <p className="mt-4 max-w-3xl leading-7 text-gray-600">
-              Products Supabase database එකට automatically add, update සහ delete කරන්න.
+              Products, promo codes සහ orders එක තැනකින් පිළිවෙලට manage කරන්න.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              loadProducts()
-            }
-            disabled={
-              productsLoading
-            }
-            className="bg-black px-6 py-4 font-black text-white hover:bg-gray-800 disabled:bg-gray-400"
-          >
-            {productsLoading
-              ? "LOADING..."
-              : "REFRESH PRODUCTS"}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="/admin/orders"
+              className="border border-black bg-white px-5 py-3 text-sm font-black transition hover:bg-black hover:text-white"
+            >
+              VIEW ORDERS
+            </a>
+
+            <button
+              type="button"
+              onClick={() => {
+                loadProducts();
+                loadPromos();
+              }}
+              disabled={
+                productsLoading ||
+                promosLoading
+              }
+              className="bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800 disabled:bg-gray-400"
+            >
+              {productsLoading ||
+              promosLoading
+                ? "REFRESHING..."
+                : "REFRESH DATA"}
+            </button>
+          </div>
         </div>
 
         {message && (
@@ -2195,6 +2219,306 @@ export default function AdminPage() {
           </div>
         )}
 
+        <div className="sticky top-0 z-30 mt-8 border border-gray-200 bg-white p-2 shadow-sm">
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                [
+                  "dashboard",
+                  "DASHBOARD",
+                ],
+                [
+                  "products",
+                  "PRODUCTS",
+                ],
+                [
+                  "promos",
+                  "PROMO CODES",
+                ],
+              ] as const
+            ).map(
+              ([section, label]) => (
+                <button
+                  key={section}
+                  type="button"
+                  onClick={() =>
+                    setActiveSection(
+                      section
+                    )
+                  }
+                  className={`px-3 py-3 text-xs font-black transition sm:px-5 sm:text-sm ${
+                    activeSection ===
+                    section
+                      ? "bg-black text-white"
+                      : "bg-gray-100 text-black hover:bg-gray-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              )
+            )}
+          </div>
+        </div>
+
+        {activeSection ===
+          "dashboard" && (
+          <div className="mt-8">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="bg-white p-6 shadow-sm">
+                <p className="text-xs font-black tracking-[0.18em] text-gray-500">
+                  TOTAL PRODUCTS
+                </p>
+                <p className="mt-3 text-4xl font-black">
+                  {products.length}
+                </p>
+              </div>
+
+              <div className="bg-white p-6 shadow-sm">
+                <p className="text-xs font-black tracking-[0.18em] text-gray-500">
+                  ACTIVE PROMOS
+                </p>
+                <p className="mt-3 text-4xl font-black">
+                  {
+                    promos.filter(
+                      (promo) =>
+                        promo.is_active
+                    ).length
+                  }
+                </p>
+              </div>
+
+              <div className="bg-white p-6 shadow-sm">
+                <p className="text-xs font-black tracking-[0.18em] text-gray-500">
+                  PROMO USES
+                </p>
+                <p className="mt-3 text-4xl font-black">
+                  {
+                    promos.reduce(
+                      (
+                        total,
+                        promo
+                      ) =>
+                        total +
+                        Number(
+                          promo.used_count ||
+                            0
+                        ),
+                      0
+                    )
+                  }
+                </p>
+              </div>
+
+              <div className="bg-white p-6 shadow-sm">
+                <p className="text-xs font-black tracking-[0.18em] text-gray-500">
+                  CATEGORIES
+                </p>
+                <p className="mt-3 text-4xl font-black">
+                  {
+                    new Set(
+                      products
+                        .map(
+                          (product) =>
+                            product.category
+                              ?.trim()
+                        )
+                        .filter(Boolean)
+                    ).size
+                  }
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => {
+                  resetForm();
+                  setActiveSection(
+                    "products"
+                  );
+                }}
+                className="bg-black p-7 text-left text-white transition hover:bg-gray-800"
+              >
+                <p className="text-xs font-bold tracking-[0.2em] text-gray-400">
+                  QUICK ACTION
+                </p>
+                <h2 className="mt-3 text-2xl font-black">
+                  + ADD NEW PRODUCT
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-gray-300">
+                  New product, colours, stock සහ size guide add කරන්න.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  resetPromoForm();
+                  setActiveSection(
+                    "promos"
+                  );
+                }}
+                className="bg-white p-7 text-left shadow-sm transition hover:-translate-y-1"
+              >
+                <p className="text-xs font-bold tracking-[0.2em] text-gray-500">
+                  QUICK ACTION
+                </p>
+                <h2 className="mt-3 text-2xl font-black">
+                  + CREATE PROMO
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-gray-600">
+                  Percentage හෝ fixed discount promo code එකක් හදන්න.
+                </p>
+              </button>
+
+              <a
+                href="/admin/orders"
+                className="bg-white p-7 text-left shadow-sm transition hover:-translate-y-1"
+              >
+                <p className="text-xs font-bold tracking-[0.2em] text-gray-500">
+                  QUICK ACTION
+                </p>
+                <h2 className="mt-3 text-2xl font-black">
+                  VIEW ORDERS
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-gray-600">
+                  Orders dashboard එකට ගිහින් orders manage කරන්න.
+                </p>
+              </a>
+            </div>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              <div className="bg-white p-6 shadow-sm md:p-8">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="text-2xl font-black">
+                    RECENT PRODUCTS
+                  </h2>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActiveSection(
+                        "products"
+                      )
+                    }
+                    className="text-sm font-black underline underline-offset-4"
+                  >
+                    MANAGE
+                  </button>
+                </div>
+
+                <div className="mt-5 divide-y">
+                  {products
+                    .slice(0, 5)
+                    .map(
+                      (product) => (
+                        <div
+                          key={
+                            product.id
+                          }
+                          className="flex items-center justify-between gap-4 py-4"
+                        >
+                          <div>
+                            <p className="font-black">
+                              {product.name}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              {product.category}
+                            </p>
+                          </div>
+
+                          <p className="font-black">
+                            Rs.{" "}
+                            {Number(
+                              product.sale_price ||
+                                product.price
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+                      )
+                    )}
+
+                  {products.length ===
+                    0 && (
+                    <p className="py-6 text-sm text-gray-500">
+                      Products නැහැ.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white p-6 shadow-sm md:p-8">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="text-2xl font-black">
+                    PROMO STATUS
+                  </h2>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActiveSection(
+                        "promos"
+                      )
+                    }
+                    className="text-sm font-black underline underline-offset-4"
+                  >
+                    MANAGE
+                  </button>
+                </div>
+
+                <div className="mt-5 divide-y">
+                  {promos
+                    .slice(0, 5)
+                    .map(
+                      (promo) => (
+                        <div
+                          key={promo.id}
+                          className="flex items-center justify-between gap-4 py-4"
+                        >
+                          <div>
+                            <p className="font-black">
+                              {promo.code}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              Used{" "}
+                              {promo.used_count ||
+                                0}
+                              {promo.usage_limit !==
+                              null
+                                ? ` / ${promo.usage_limit}`
+                                : " / Unlimited"}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`px-3 py-1 text-xs font-black ${
+                              promo.is_active
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {promo.is_active
+                              ? "ACTIVE"
+                              : "INACTIVE"}
+                          </span>
+                        </div>
+                      )
+                    )}
+
+                  {promos.length ===
+                    0 && (
+                    <p className="py-6 text-sm text-gray-500">
+                      Promo codes නැහැ.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === "promos" && (
         <div className="mt-8 bg-white p-6 shadow-sm md:p-8">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
@@ -2566,6 +2890,10 @@ export default function AdminPage() {
           )}
         </div>
 
+        )}
+
+        {activeSection === "products" && (
+          <>
         <div className="mt-8 grid gap-5 bg-white p-6 shadow-sm md:grid-cols-2 md:p-8">
           <div>
             <label className="mb-2 block text-sm font-black">
@@ -3504,6 +3832,8 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+          </>
+        )}
       </section>
     </main>
   );
