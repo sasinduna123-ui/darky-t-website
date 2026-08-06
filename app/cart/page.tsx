@@ -37,6 +37,9 @@ type SavedOrder = {
 
   totalQuantity: number;
   subtotal: number;
+  promoCode?: string;
+  discountAmount?: number;
+  discountedSubtotal?: number;
   deliveryFee: number;
   finalTotal: number;
 
@@ -44,6 +47,17 @@ type SavedOrder = {
   createdAt: string;
 
   items: CartItem[];
+};
+
+
+type AppliedPromo = {
+  id: string;
+  code: string;
+  discountType:
+    | "percentage"
+    | "fixed";
+  discountValue: number;
+  discountAmount: number;
 };
 
 const districts = [
@@ -207,6 +221,28 @@ export default function CartPage() {
     setSuccessMessage,
   ] = useState("");
 
+  const [
+    promoCode,
+    setPromoCode,
+  ] = useState("");
+
+  const [
+    appliedPromo,
+    setAppliedPromo,
+  ] = useState<AppliedPromo | null>(
+    null
+  );
+
+  const [
+    promoMessage,
+    setPromoMessage,
+  ] = useState("");
+
+  const [
+    isApplyingPromo,
+    setIsApplyingPromo,
+  ] = useState(false);
+
   useEffect(() => {
     try {
       const savedCart =
@@ -278,6 +314,11 @@ export default function CartPage() {
     );
   }
 
+  function clearAppliedPromo() {
+    setAppliedPromo(null);
+    setPromoMessage("");
+  }
+
   function increaseQuantity(
     index: number
   ) {
@@ -305,6 +346,7 @@ export default function CartPage() {
     }
 
     setErrorMessage("");
+    clearAppliedPromo();
 
     const updatedCart =
       cartItems.map(
@@ -333,6 +375,7 @@ export default function CartPage() {
     index: number
   ) {
     setErrorMessage("");
+    clearAppliedPromo();
 
     const updatedCart =
       cartItems.map(
@@ -371,6 +414,7 @@ export default function CartPage() {
 
     saveCart(updatedCart);
     setErrorMessage("");
+    clearAppliedPromo();
   }
 
   function clearCart() {
@@ -385,6 +429,7 @@ export default function CartPage() {
 
     saveCart([]);
     setErrorMessage("");
+    clearAppliedPromo();
   }
 
   const subtotal =
@@ -423,11 +468,122 @@ export default function CartPage() {
       ? 350
       : 0;
 
+  const discountAmount =
+    appliedPromo
+      ? Math.min(
+          subtotal,
+          Math.max(
+            0,
+            Number(
+              appliedPromo.discountAmount
+            ) || 0
+          )
+        )
+      : 0;
+
+  const discountedSubtotal =
+    Math.max(
+      0,
+      subtotal - discountAmount
+    );
+
   const finalTotal =
     hasFixedDeliveryFee
-      ? subtotal +
+      ? discountedSubtotal +
         deliveryFee
-      : subtotal;
+      : discountedSubtotal;
+
+  async function applyPromoCode() {
+    const cleanCode =
+      promoCode
+        .trim()
+        .toUpperCase();
+
+    if (!cleanCode) {
+      setAppliedPromo(null);
+      setPromoMessage(
+        "Promo code එක ඇතුළත් කරන්න."
+      );
+      return;
+    }
+
+    if (subtotal <= 0) {
+      setAppliedPromo(null);
+      setPromoMessage(
+        "Promo code apply කරන්න cart එකේ product එකක් තියෙන්න ඕන."
+      );
+      return;
+    }
+
+    setIsApplyingPromo(true);
+    setPromoMessage("");
+    setErrorMessage("");
+
+    try {
+      const response =
+        await fetch(
+          "/api/promo/validate",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              code: cleanCode,
+              subtotal,
+            }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.valid
+      ) {
+        throw new Error(
+          result.error ||
+            "Promo code එක apply කරන්න බැරි වුණා."
+        );
+      }
+
+      setPromoCode(
+        result.promo.code
+      );
+
+      setAppliedPromo({
+        id: result.promo.id,
+        code: result.promo.code,
+        discountType:
+          result.promo.discountType,
+        discountValue:
+          Number(
+            result.promo.discountValue
+          ),
+        discountAmount:
+          Number(
+            result.discountAmount
+          ),
+      });
+
+      setPromoMessage(
+        result.message ||
+          `${result.promo.code} promo code එක apply කළා.`
+      );
+    } catch (error) {
+      setAppliedPromo(null);
+
+      setPromoMessage(
+        error instanceof Error
+          ? error.message
+          : "Promo code එක apply කරන්න බැරි වුණා."
+      );
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  }
 
   function validateForm() {
     if (
@@ -629,6 +785,9 @@ export default function CartPage() {
         note:
           note.trim(),
 
+        promoCode:
+          appliedPromo?.code || "",
+
         items:
           cartItems.map(
             (item) => ({
@@ -696,6 +855,20 @@ export default function CartPage() {
         result.orderNumber ||
         orderNumber;
 
+      const databaseDiscountAmount =
+        Number(
+          result.discountAmount
+        ) || discountAmount;
+
+      const databaseDiscountedSubtotal =
+        Number(
+          result.discountedSubtotal
+        ) || Math.max(
+          0,
+          subtotal -
+            databaseDiscountAmount
+        );
+
       const databaseDeliveryFee =
         Number(
           result.deliveryFee
@@ -704,7 +877,13 @@ export default function CartPage() {
       const databaseFinalTotal =
         Number(
           result.finalTotal
-        ) || subtotal;
+        ) ||
+        (
+          hasFixedDeliveryFee
+            ? databaseDiscountedSubtotal +
+              databaseDeliveryFee
+            : databaseDiscountedSubtotal
+        );
 
       const productDetails =
         cartItems
@@ -767,6 +946,11 @@ ${productDetails}
 
 • Total Quantity: ${totalQuantity}
 • Subtotal: Rs. ${subtotal.toLocaleString()}
+${appliedPromo
+  ? `• Promo Code: ${appliedPromo.code}
+• Discount: - Rs. ${databaseDiscountAmount.toLocaleString()}
+• Discounted Subtotal: Rs. ${databaseDiscountedSubtotal.toLocaleString()}`
+  : "• Promo Code: Not applied"}
 ${deliveryDetails}
 
 --------------------------------
@@ -823,6 +1007,15 @@ Thank you,
         totalQuantity,
 
         subtotal,
+
+        promoCode:
+          appliedPromo?.code || "",
+
+        discountAmount:
+          databaseDiscountAmount,
+
+        discountedSubtotal:
+          databaseDiscountedSubtotal,
 
         deliveryFee:
           databaseDeliveryFee,
@@ -1144,6 +1337,70 @@ Thank you,
                   ORDER SUMMARY
                 </h2>
 
+                <div className="mt-6 border border-gray-200 bg-gray-50 p-4">
+                  <label className="mb-2 block text-xs font-black tracking-[0.18em] text-gray-500">
+                    PROMO CODE
+                  </label>
+
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={(event) => {
+                        setPromoCode(
+                          event.target.value.toUpperCase()
+                        );
+
+                        if (appliedPromo) {
+                          clearAppliedPromo();
+                        }
+                      }}
+                      placeholder="Example: DARKY10"
+                      className="min-w-0 flex-1 border border-gray-300 bg-white px-4 py-3 font-bold uppercase outline-none transition focus:border-black"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={applyPromoCode}
+                      disabled={isApplyingPromo}
+                      className={`px-6 py-3 font-black text-white transition ${
+                        isApplyingPromo
+                          ? "cursor-not-allowed bg-gray-500"
+                          : "bg-black hover:bg-gray-800"
+                      }`}
+                    >
+                      {isApplyingPromo
+                        ? "CHECKING..."
+                        : "APPLY"}
+                    </button>
+                  </div>
+
+                  {promoMessage && (
+                    <p
+                      className={`mt-3 text-sm font-bold ${
+                        appliedPromo
+                          ? "text-green-700"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {promoMessage}
+                    </p>
+                  )}
+
+                  {appliedPromo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPromoCode("");
+                        clearAppliedPromo();
+                      }}
+                      className="mt-3 text-xs font-black underline underline-offset-4"
+                    >
+                      REMOVE PROMO
+                    </button>
+                  )}
+                </div>
+
                 <div className="mt-6 space-y-4">
                   <div className="flex justify-between border-b pb-4">
                     <span className="text-gray-600">
@@ -1167,6 +1424,32 @@ Thank you,
                       {subtotal.toLocaleString()}
                     </span>
                   </div>
+
+                  {appliedPromo && (
+                    <>
+                      <div className="flex justify-between border-b pb-4">
+                        <span className="text-gray-600">
+                          Promo ({appliedPromo.code})
+                        </span>
+
+                        <span className="font-bold text-green-700">
+                          - Rs.{" "}
+                          {discountAmount.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between border-b pb-4">
+                        <span className="text-gray-600">
+                          Discounted Subtotal
+                        </span>
+
+                        <span className="font-bold">
+                          Rs.{" "}
+                          {discountedSubtotal.toLocaleString()}
+                        </span>
+                      </div>
+                    </>
+                  )}
 
                   <div className="flex justify-between border-b pb-4">
                     <span className="text-gray-600">
